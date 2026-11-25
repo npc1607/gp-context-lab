@@ -309,7 +309,16 @@ func (c *CachedClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse,
 	}
 	if err := os.MkdirAll(c.CacheDir, 0o755); err == nil {
 		if data, err := json.MarshalIndent(resp, "", "  "); err == nil {
-			_ = os.WriteFile(path, data, 0o644)
+			if tmp, err := os.CreateTemp(c.CacheDir, ".tmp-*"); err == nil {
+				tmpName := tmp.Name()
+				_, wErr := tmp.Write(data)
+				cErr := tmp.Close()
+				if wErr == nil && cErr == nil {
+					_ = os.Rename(tmpName, path)
+				} else {
+					_ = os.Remove(tmpName)
+				}
+			}
 		}
 	}
 	return resp, nil

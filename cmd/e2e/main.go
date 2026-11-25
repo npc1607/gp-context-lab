@@ -10,6 +10,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"sync/atomic"
 
 	"github.com/npc1607/gp-context-lab/internal/dataset"
 	"github.com/npc1607/gp-context-lab/internal/index"
@@ -64,6 +66,7 @@ func main() {
 		extractorFlag = flag.String("extractor", "heuristic", "heuristic | oracle")
 		epochFlag     = flag.Int("epoch", 16, "epoch stride for E4")
 		cacheDir      = flag.String("cache-dir", ".cache/llm", "disk response cache directory (empty disables)")
+		concurrency   = flag.Int("concurrency", 8, "number of concurrent LLM/judge worker goroutines")
 		limitCases    = flag.Int("limit", 0, "optional max number of cases to run (0 = all)")
 		pairwiseFlag  = flag.String("pairwise", "E4-A,E4-B", "optional pair of strategies for symmetric position-swap comparison")
 		outPath       = flag.String("out", "", "optional JSON report output path")
@@ -111,26 +114,28 @@ func main() {
 	}
 
 	ctx := context.Background()
-	reports := make([]strategyE2EReport, 0, len(strats))
-	answersByStrat := make(map[string]map[string]string) // strat -> case/probe -> answer
-	passVectors := make(map[string][]bool)
+	reports := make([]strategyE2EReport, len(strats))
+	answersByStrat := make(map[string]map[string]string, len(strats))
+	passVectors := make(map[string][]bool, len(strats))
 
-	for _, strat := range strats {
-		rep := strategyE2EReport{
-			Strategy:  strat.Name(),
-			Quadrants: map[string]int{},
-		}
-		ansMap := make(map[string]string)
-		var passVec []bool
-		var rubricSum, recallSum, contamSum float64
-
+	// 1. Pre-build all deterministic PromptAssemblies & Layer 1 metrics sequentially (fast, ~0.4ms each).
+	type probeJob struct {
+		stratIdx int
+		strat    string
+		c        dataset.Case
+		probe    dataset.EvalProbe
+		l1       metrics.ProbeMetrics
+		req      llm.ChatRequest
+		runID    string
+	}
+	var jobs []probeJob
+	for sIdx, strat := range strats {
 		for _, c := range cases {
 			strat.Reset(c.SystemPrompt, c.TokenBudget)
 			probesByTurn := make(map[int][]dataset.EvalProbe)
 			for _, p := range c.EvalProbes {
 				probesByTurn[p.AtTurn] = append(probesByTurn[p.AtTurn], p)
 			}
-
 			for _, turn := range c.Turns {
 				_ = strat.OnTurn(turn)
 				for _, probe := range probesByTurn[turn.TurnID] {
@@ -140,79 +145,128 @@ func main() {
 						continue
 					}
 					l1 := metrics.EvalLayer1(c, probe, asm.SelectedEntryIDs, asm.PollutedEntryIDs, asm.WorkingSetTokens, asm.WorkingSetCands, bm.TotalMs)
-
-					req := toChatRequest(*modelFlag, c.SystemPrompt, asm)
-					resp, err := genClient.Chat(ctx, req)
-					if err != nil {
-						fmt.Fprintf(os.Stderr, "[%s/%s/%s] LLM chat err: %v\n", strat.Name(), c.CaseID, probe.ProbeID, err)
-						continue
-					}
-
-					l2 := judge.EvalLayer2(resp.Content, probe.DeterministicChecks)
-					var l3 judge.Layer3Result
-					if l2.Passed {
-						runID := opaqueRunID(strat.Name(), c.CaseID, probe.ProbeID)
-						l3, err = atomicJudge.JudgeProbe(ctx, runID, probe.Query, resp.Content, probe.ExpectedRubric)
-						if err != nil {
-							fmt.Fprintf(os.Stderr, "[%s/%s/%s] Judge err: %v\n", strat.Name(), c.CaseID, probe.ProbeID, err)
-						}
-					}
-
-					passed := l2.Passed && l3.RubricScore == 1.0
-					l1OK := l1.BridgeCompleteness == 1.0 && l1.Contamination == 0.0
-					quad := judge.ClassifyQuadrant(l1OK, passed)
-
-					rep.Quadrants[string(quad)]++
-					rep.TotalInputTok += resp.Usage.InputTokens
-					rep.TotalCacheRead += resp.Usage.CacheReadTokens
-					rep.TotalCacheWrite += resp.Usage.CacheWriteTokens
-					rep.TotalOutputTok += resp.Usage.OutputTokens
-					uncached := resp.Usage.InputTokens - resp.Usage.CacheReadTokens - resp.Usage.CacheWriteTokens
-					if uncached < 0 {
-						uncached = 0
-					}
-					rep.EstAnthropicUSD += float64(uncached)*1.0 + float64(resp.Usage.CacheWriteTokens)*1.25 + float64(resp.Usage.CacheReadTokens)*0.10
-
-					if passed {
-						rep.PassRate++
-					}
-					rubricSum += l3.RubricScore
-					recallSum += l1.EvidenceRecall
-					contamSum += l1.Contamination
-					passVec = append(passVec, passed)
-					ansMap[c.CaseID+"/"+probe.ProbeID] = resp.Content
-
-					rep.Probes = append(rep.Probes, probeE2EResult{
-						CaseID:       c.CaseID,
-						Suite:        string(c.Suite),
-						ProbeID:      probe.ProbeID,
-						RunID:        opaqueRunID(strat.Name(), c.CaseID, probe.ProbeID),
-						Layer1:       l1,
-						Layer2:       l2,
-						Layer3:       l3,
-						Pass:         passed,
-						Quadrant:     quad,
-						Answer:       resp.Content,
-						GenUsage:     resp.Usage,
-						GenLatencyMs: resp.LatencyMs,
+					jobs = append(jobs, probeJob{
+						stratIdx: sIdx,
+						strat:    strat.Name(),
+						c:        c,
+						probe:    probe,
+						l1:       l1,
+						req:      toChatRequest(*modelFlag, c.SystemPrompt, asm),
+						runID:    opaqueRunID(strat.Name(), c.CaseID, probe.ProbeID),
 					})
 				}
 			}
 		}
+	}
 
+	// 2. Execute LLM generation + Layer 2 + Layer 3 Atomic Judge concurrently across bounded workers.
+	jobResults := make([]*probeE2EResult, len(jobs))
+	workers := *concurrency
+	if workers < 1 {
+		workers = 1
+	}
+	jobCh := make(chan int, len(jobs))
+	for i := range jobs {
+		jobCh <- i
+	}
+	close(jobCh)
+
+	var doneCount atomic.Int64
+	var wg sync.WaitGroup
+	for w := 0; w < workers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for idx := range jobCh {
+				jb := jobs[idx]
+				resp, err := genClient.Chat(ctx, jb.req)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "[%s/%s/%s] LLM chat err: %v\n", jb.strat, jb.c.CaseID, jb.probe.ProbeID, err)
+					continue
+				}
+				l2 := judge.EvalLayer2(resp.Content, jb.probe.DeterministicChecks)
+				var l3 judge.Layer3Result
+				if l2.Passed {
+					l3, err = atomicJudge.JudgeProbe(ctx, jb.runID, jb.probe.Query, resp.Content, jb.probe.ExpectedRubric)
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "[%s/%s/%s] Judge err: %v\n", jb.strat, jb.c.CaseID, jb.probe.ProbeID, err)
+					}
+				}
+				passed := l2.Passed && l3.RubricScore == 1.0
+				l1OK := jb.l1.BridgeCompleteness == 1.0 && jb.l1.Contamination == 0.0
+				quad := judge.ClassifyQuadrant(l1OK, passed)
+				jobResults[idx] = &probeE2EResult{
+					CaseID:       jb.c.CaseID,
+					Suite:        string(jb.c.Suite),
+					ProbeID:      jb.probe.ProbeID,
+					RunID:        jb.runID,
+					Layer1:       jb.l1,
+					Layer2:       l2,
+					Layer3:       l3,
+					Pass:         passed,
+					Quadrant:     quad,
+					Answer:       resp.Content,
+					GenUsage:     resp.Usage,
+					GenLatencyMs: resp.LatencyMs,
+				}
+				nDone := doneCount.Add(1)
+				if nDone%10 == 0 || int(nDone) == len(jobs) {
+					fmt.Fprintf(os.Stderr, "E2E progress: %d/%d probes completed\n", nDone, len(jobs))
+				}
+			}
+		}()
+	}
+	wg.Wait()
+
+	// 3. Aggregate results in deterministic original order.
+	rubricSums := make([]float64, len(strats))
+	recallSums := make([]float64, len(strats))
+	contamSums := make([]float64, len(strats))
+	for sIdx, strat := range strats {
+		reports[sIdx] = strategyE2EReport{
+			Strategy:  strat.Name(),
+			Quadrants: map[string]int{},
+		}
+		answersByStrat[strat.Name()] = make(map[string]string)
+	}
+	for idx, res := range jobResults {
+		if res == nil {
+			continue
+		}
+		jb := jobs[idx]
+		rep := &reports[jb.stratIdx]
+		rep.Quadrants[string(res.Quadrant)]++
+		rep.TotalInputTok += res.GenUsage.InputTokens
+		rep.TotalCacheRead += res.GenUsage.CacheReadTokens
+		rep.TotalCacheWrite += res.GenUsage.CacheWriteTokens
+		rep.TotalOutputTok += res.GenUsage.OutputTokens
+		uncached := res.GenUsage.InputTokens - res.GenUsage.CacheReadTokens - res.GenUsage.CacheWriteTokens
+		if uncached < 0 {
+			uncached = 0
+		}
+		rep.EstAnthropicUSD += float64(uncached)*1.0 + float64(res.GenUsage.CacheWriteTokens)*1.25 + float64(res.GenUsage.CacheReadTokens)*0.10
+		if res.Pass {
+			rep.PassRate++
+		}
+		rubricSums[jb.stratIdx] += res.Layer3.RubricScore
+		recallSums[jb.stratIdx] += res.Layer1.EvidenceRecall
+		contamSums[jb.stratIdx] += res.Layer1.Contamination
+		passVectors[jb.strat] = append(passVectors[jb.strat], res.Pass)
+		answersByStrat[jb.strat][jb.c.CaseID+"/"+jb.probe.ProbeID] = res.Answer
+		rep.Probes = append(rep.Probes, *res)
+	}
+	for sIdx := range reports {
+		rep := &reports[sIdx]
 		nProbes := float64(len(rep.Probes))
 		if nProbes > 0 {
 			rep.PassRate /= nProbes
-			rep.MeanRubricScore = rubricSum / nProbes
-			rep.MeanRecall = recallSum / nProbes
-			rep.ContamRate = contamSum / nProbes
+			rep.MeanRubricScore = rubricSums[sIdx] / nProbes
+			rep.MeanRecall = recallSums[sIdx] / nProbes
+			rep.ContamRate = contamSums[sIdx] / nProbes
 		}
 		if rep.TotalInputTok > 0 {
 			rep.CacheReadRatio = float64(rep.TotalCacheRead) / float64(rep.TotalInputTok)
 		}
-		reports = append(reports, rep)
-		answersByStrat[strat.Name()] = ansMap
-		passVectors[strat.Name()] = passVec
 	}
 
 	// Compute utility relative to B0 cost (or first strategy if B0 absent).
