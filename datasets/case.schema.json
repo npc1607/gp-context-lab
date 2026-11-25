@@ -93,7 +93,21 @@
           "expected_rubric": {
             "type": "array",
             "items": { "type": "string" },
-            "description": "LLM-as-a-Judge 或确定性检查的得分要点"
+            "description": "Atomic Rubric 逐条原子核验的得分要点"
+          },
+          "deterministic_checks": {
+            "type": "object",
+            "description": "可选：Layer 2 确定性输出硬断言（触发违禁项直接 Hard Fail）",
+            "properties": {
+              "must_match_any_regex": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "must_not_match_regex": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
           }
         }
       }
