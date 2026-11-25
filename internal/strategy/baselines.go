@@ -119,7 +119,9 @@ func (s *B1GPCurrent) BuildPrompt(query string, _ int) (PromptAssembly, BuildMet
 	}
 
 	histText, histToks, activeIDs := renderSlice(s.compactedTo)
-	// Simulate 0.80 * budget auto-compaction into lossy natural-language summary (misses detail & keeps old statements).
+	// Honest natural-language compaction at 0.80 * tokenBudget:
+	// Retains full user & assistant statements (no 48-rune truncation, no dropping middle lines)
+	// and summarizes tool calls by path/command, trimming only from oldest routine lines if summary exceeds cap.
 	threshold := int(float64(s.tokenBudget) * 0.80)
 	if threshold < 200 {
 		threshold = 200
@@ -130,21 +132,27 @@ func (s *B1GPCurrent) BuildPrompt(query string, _ int) (PromptAssembly, BuildMet
 		sumBuf.WriteString(s.summaryText)
 		for i := s.compactedTo; i < newCut; i++ {
 			st := s.turns[i]
-			// Coarse summary keeps user goals/constraints indiscriminately (including old superseded ones!), drops tool internals.
-			if st.turn.Role == "user" {
-				snippet := st.text
-				if len([]rune(snippet)) > 48 {
-					snippet = string([]rune(snippet)[:48]) + "..."
+			switch st.turn.Role {
+			case "user", "assistant":
+				if strings.TrimSpace(st.text) != "" {
+					sumBuf.WriteString(fmt.Sprintf("- [%s turn %d] %s\n", st.turn.Role, st.turn.TurnID, strings.TrimSpace(st.text)))
+					s.summaryIDs = uniqueAppend(s.summaryIDs, st.turn.EntryID)
 				}
-				sumBuf.WriteString(fmt.Sprintf("- [turn %d] %s\n", st.turn.TurnID, snippet))
-				s.summaryIDs = uniqueAppend(s.summaryIDs, st.turn.EntryID)
+				for _, tc := range st.turn.ToolCalls {
+					sumBuf.WriteString(fmt.Sprintf("- [tool_call turn %d] %s(%s)\n", st.turn.TurnID, tc.Name, tc.Arguments))
+				}
+			case "tool":
+				if !shouldMaskObservation(st.turn) {
+					sumBuf.WriteString(fmt.Sprintf("- [tool turn %d] %s\n", st.turn.TurnID, strings.TrimSpace(st.text)))
+					s.summaryIDs = uniqueAppend(s.summaryIDs, st.turn.EntryID)
+				}
 			}
 		}
-		// Keep summary bounded so it mirrors lossy natural-language compaction drift.
+		// Enforce a generous summary cap (60% of tokenBudget) by dropping oldest lines only when exceeded.
+		summaryCap := int(float64(s.tokenBudget) * 0.60)
 		lines := strings.Split(strings.TrimSpace(sumBuf.String()), "\n")
-		if len(lines) > 8 {
-			// Natural language compaction often retains earliest/noisy lines or overwrites middle ones.
-			lines = append(lines[:3], lines[len(lines)-4:]...)
+		for len(lines) > 1 && tokenizer.Count(strings.Join(lines, "\n")) > summaryCap {
+			lines = lines[1:]
 		}
 		s.summaryText = strings.Join(lines, "\n") + "\n"
 		s.compactedTo = newCut

@@ -2,11 +2,11 @@
 
 本目录存放面向 [`gp`](https://github.com/npc1607/gp) 上下文权重与缓存优化实验的评测用例，所有用例均符合 [`case.schema.json`](case.schema.json) 规范。
 
-> 注：除快速演示示例 [`sample-multihop-case.json`](sample-multihop-case.json)（8 轮精简版）外，Suite A/B/C 共 18 个精标基准用例均构造了 **34–46 轮对话**、累计体积达 **3.7x–6.9x `token_budget`**；Suite D 共 5 个长会话回放用例构造了 **98–138 轮对话**、累计体积达 **40k+ tokens**，确保任何“全量塞入”或“仅看近期 5–8 轮窗口”的朴素策略都会暴露真实瓶颈，从而有效区分各组数学工具的真实能力。
+> 注：除快速演示示例 [`sample-multihop-case.json`](sample-multihop-case.json)（8 轮精简版）外，Suite A/B/C 共 23 个精标基准用例均构造了 **34–46 轮对话**、累计体积达 **3.7x–6.9x `token_budget`**（含 5 个无显式关键词的抗过拟合泛化用例 `suite_b_07`–`11`）；Suite D 共 5 个长会话回放用例构造了 **98–138 轮对话**、累计体积达 **40k+ tokens**。
 
 ---
 
-## 套件分类与用例清单（共 24 个）
+## 套件分类与用例清单（共 29 个）
 
 ### 0. 入门示例
 - [`sample-multihop-case.json`](sample-multihop-case.json)：8 轮复合示例（离线 VPC 构建 + MySQL 切 PostgreSQL）。
@@ -28,6 +28,11 @@
 4. [`suite_b_04_mq_and_codec_partial_supersession.json`](suite_b_04_mq_and_codec_partial_supersession.json)（42 轮 / 3386 tok vs 900 预算）：先换传输层（Kafka $\to$ NATS JetStream）、再换编码（JSON $\to$ Protobuf）的正交分段覆盖测试。
 5. [`suite_b_05_deploy_env_and_branch_switch.json`](suite_b_05_deploy_env_and_branch_switch.json)（40 轮 / 3336 tok vs 900 预算）：`develop`/`staging-us` $\to$ `release/*`/`prod-sg` + 10% 灰度发布切换。
 6. [`suite_b_06_error_model_upgrade.json`](suite_b_06_error_model_upgrade.json)（40 轮 / 3373 tok vs 900 预算）：哨兵错误/字符串匹配 $\to$ `*errs.BizError` + `errors.As` + 错误码常量联动。
+7. [`suite_b_07_implicit_db_revert.json`](suite_b_07_implicit_db_revert.json)（36 轮 / 900 预算）：无显式关键词的口语化数据库回退（“还是用回 MySQL 8.0 吧”），专测启发式关键词表泛化边界。
+8. [`suite_b_08_implicit_cache_drop.json`](suite_b_08_implicit_cache_drop.json)（36 轮 / 900 预算）：无显式关键词搁置集群缓存（“先用 `sync.Map` 顶一下，之前说的集群方案先不上了”）。
+9. [`suite_b_09_implicit_auth_override.json`](suite_b_09_implicit_auth_override.json)（36 轮 / 900 预算）：口语化同步覆盖鉴权方式（“统一走 OAuth2 Bearer Token，老的 header 留着也没人用了”）。
+10. [`suite_b_10_implicit_log_format.json`](suite_b_10_implicit_log_format.json)（36 轮 / 900 预算）：隐晦切换日志输出格式（“顺手统一成结构化 JSON 吧，别打纯文本了”）。
+11. [`suite_b_11_implicit_retry_policy.json`](suite_b_11_implicit_retry_policy.json)（36 轮 / 900 预算）：口语修改重试策略上限（“调成最多 2 次带指数退避，别再连发 5 次了”）。
 
 ### 3. Suite C：高熵噪音与复读机风暴（`suite_c_noise`，6 个）
 专测 **Budgeted MMR / k-DPP 去冗余 + 密度过滤**，同时用于反证 **裸 Surprisal（$-\log P$）与朴素 Top-K** 的失效率：

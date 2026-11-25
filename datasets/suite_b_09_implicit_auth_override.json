@@ -1,0 +1,291 @@
+{
+  "case_id": "suite_b_09_implicit_auth_override",
+  "suite": "suite_b_conflict",
+  "title": "隐晦变更接口鉴权方式（无显式废除关键词）",
+  "description": "通过口语化同步表达覆盖早期 API Key 约定。",
+  "system_prompt": "You are gp, a high-performance Go coding and ops agent.",
+  "token_budget": 900,
+  "turns": [
+    {
+      "turn_id": 1,
+      "entry_id": "entry_001",
+      "role": "user",
+      "content": "对外回调接口先用静态 X-API-Key header 校验。",
+      "mentioned_entities": [
+        "x_api_key"
+      ],
+      "constraint_event": {
+        "action": "add",
+        "constraint_id": "cst_adv3_1",
+        "statement": "使用 X-API-Key header"
+      }
+    },
+    {
+      "turn_id": 2,
+      "entry_id": "entry_002",
+      "role": "assistant",
+      "content": "好的，已记录当前方案。"
+    },
+    {
+      "turn_id": 3,
+      "entry_id": "entry_003",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_1",
+          "name": "read",
+          "arguments": "{\"path\":\"internal/cfg/app.go\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 4,
+      "entry_id": "entry_004",
+      "role": "tool",
+      "tool_call_id": "call_1",
+      "content": "package cfg\ntype AppConfig struct { TimeoutSec int }\n",
+      "mentioned_entities": [
+        "internal/cfg/app.go"
+      ]
+    },
+    {
+      "turn_id": 5,
+      "entry_id": "entry_005",
+      "role": "assistant",
+      "content": "已读取基础配置结构体。"
+    },
+    {
+      "turn_id": 6,
+      "entry_id": "entry_006",
+      "role": "user",
+      "content": "继续看下健康检查路由。"
+    },
+    {
+      "turn_id": 7,
+      "entry_id": "entry_007",
+      "role": "user",
+      "content": "安全评审那边口头同步了，上线后统一走 OAuth2 Bearer Token，老的 header 方式留着也没人用了。",
+      "mentioned_entities": [
+        "oauth2",
+        "bearer"
+      ],
+      "constraint_event": {
+        "action": "supersede",
+        "constraint_id": "cst_adv3_2",
+        "supersedes": "cst_adv3_1",
+        "statement": "统一走 OAuth2 Bearer Token"
+      }
+    },
+    {
+      "turn_id": 8,
+      "entry_id": "entry_008",
+      "role": "assistant",
+      "content": "明白，后续实现按新约定推进。"
+    },
+    {
+      "turn_id": 9,
+      "entry_id": "entry_009",
+      "role": "user",
+      "content": "跑一下第 1 组模块例行检查。"
+    },
+    {
+      "turn_id": 10,
+      "entry_id": "entry_010",
+      "role": "tool",
+      "tool_call_id": "call_pad_0",
+      "content": "=== RUN TestMod_0_0\n--- PASS: TestMod_0_0 (0.01s)\n=== RUN TestMod_0_1\n--- PASS: TestMod_0_1 (0.01s)\n=== RUN TestMod_0_2\n--- PASS: TestMod_0_2 (0.01s)\n=== RUN TestMod_0_3\n--- PASS: TestMod_0_3 (0.01s)\n=== RUN TestMod_0_4\n--- PASS: TestMod_0_4 (0.01s)\n=== RUN TestMod_0_5\n--- PASS: TestMod_0_5 (0.01s)\n=== RUN TestMod_0_6\n--- PASS: TestMod_0_6 (0.01s)\n=== RUN TestMod_0_7\n--- PASS: TestMod_0_7 (0.01s)\n=== RUN TestMod_0_8\n--- PASS: TestMod_0_8 (0.01s)\n=== RUN TestMod_0_9\n--- PASS: TestMod_0_9 (0.01s)\n=== RUN TestMod_0_10\n--- PASS: TestMod_0_10 (0.01s)\n=== RUN TestMod_0_11\n--- PASS: TestMod_0_11 (0.01s)"
+    },
+    {
+      "turn_id": 11,
+      "entry_id": "entry_011",
+      "role": "user",
+      "content": "跑一下第 2 组模块例行检查。"
+    },
+    {
+      "turn_id": 12,
+      "entry_id": "entry_012",
+      "role": "tool",
+      "tool_call_id": "call_pad_1",
+      "content": "=== RUN TestMod_1_0\n--- PASS: TestMod_1_0 (0.01s)\n=== RUN TestMod_1_1\n--- PASS: TestMod_1_1 (0.01s)\n=== RUN TestMod_1_2\n--- PASS: TestMod_1_2 (0.01s)\n=== RUN TestMod_1_3\n--- PASS: TestMod_1_3 (0.01s)\n=== RUN TestMod_1_4\n--- PASS: TestMod_1_4 (0.01s)\n=== RUN TestMod_1_5\n--- PASS: TestMod_1_5 (0.01s)\n=== RUN TestMod_1_6\n--- PASS: TestMod_1_6 (0.01s)\n=== RUN TestMod_1_7\n--- PASS: TestMod_1_7 (0.01s)\n=== RUN TestMod_1_8\n--- PASS: TestMod_1_8 (0.01s)\n=== RUN TestMod_1_9\n--- PASS: TestMod_1_9 (0.01s)\n=== RUN TestMod_1_10\n--- PASS: TestMod_1_10 (0.01s)\n=== RUN TestMod_1_11\n--- PASS: TestMod_1_11 (0.01s)"
+    },
+    {
+      "turn_id": 13,
+      "entry_id": "entry_013",
+      "role": "user",
+      "content": "跑一下第 3 组模块例行检查。"
+    },
+    {
+      "turn_id": 14,
+      "entry_id": "entry_014",
+      "role": "tool",
+      "tool_call_id": "call_pad_2",
+      "content": "=== RUN TestMod_2_0\n--- PASS: TestMod_2_0 (0.01s)\n=== RUN TestMod_2_1\n--- PASS: TestMod_2_1 (0.01s)\n=== RUN TestMod_2_2\n--- PASS: TestMod_2_2 (0.01s)\n=== RUN TestMod_2_3\n--- PASS: TestMod_2_3 (0.01s)\n=== RUN TestMod_2_4\n--- PASS: TestMod_2_4 (0.01s)\n=== RUN TestMod_2_5\n--- PASS: TestMod_2_5 (0.01s)\n=== RUN TestMod_2_6\n--- PASS: TestMod_2_6 (0.01s)\n=== RUN TestMod_2_7\n--- PASS: TestMod_2_7 (0.01s)\n=== RUN TestMod_2_8\n--- PASS: TestMod_2_8 (0.01s)\n=== RUN TestMod_2_9\n--- PASS: TestMod_2_9 (0.01s)\n=== RUN TestMod_2_10\n--- PASS: TestMod_2_10 (0.01s)\n=== RUN TestMod_2_11\n--- PASS: TestMod_2_11 (0.01s)"
+    },
+    {
+      "turn_id": 15,
+      "entry_id": "entry_015",
+      "role": "user",
+      "content": "跑一下第 4 组模块例行检查。"
+    },
+    {
+      "turn_id": 16,
+      "entry_id": "entry_016",
+      "role": "tool",
+      "tool_call_id": "call_pad_3",
+      "content": "=== RUN TestMod_3_0\n--- PASS: TestMod_3_0 (0.01s)\n=== RUN TestMod_3_1\n--- PASS: TestMod_3_1 (0.01s)\n=== RUN TestMod_3_2\n--- PASS: TestMod_3_2 (0.01s)\n=== RUN TestMod_3_3\n--- PASS: TestMod_3_3 (0.01s)\n=== RUN TestMod_3_4\n--- PASS: TestMod_3_4 (0.01s)\n=== RUN TestMod_3_5\n--- PASS: TestMod_3_5 (0.01s)\n=== RUN TestMod_3_6\n--- PASS: TestMod_3_6 (0.01s)\n=== RUN TestMod_3_7\n--- PASS: TestMod_3_7 (0.01s)\n=== RUN TestMod_3_8\n--- PASS: TestMod_3_8 (0.01s)\n=== RUN TestMod_3_9\n--- PASS: TestMod_3_9 (0.01s)\n=== RUN TestMod_3_10\n--- PASS: TestMod_3_10 (0.01s)\n=== RUN TestMod_3_11\n--- PASS: TestMod_3_11 (0.01s)"
+    },
+    {
+      "turn_id": 17,
+      "entry_id": "entry_017",
+      "role": "user",
+      "content": "跑一下第 5 组模块例行检查。"
+    },
+    {
+      "turn_id": 18,
+      "entry_id": "entry_018",
+      "role": "tool",
+      "tool_call_id": "call_pad_4",
+      "content": "=== RUN TestMod_4_0\n--- PASS: TestMod_4_0 (0.01s)\n=== RUN TestMod_4_1\n--- PASS: TestMod_4_1 (0.01s)\n=== RUN TestMod_4_2\n--- PASS: TestMod_4_2 (0.01s)\n=== RUN TestMod_4_3\n--- PASS: TestMod_4_3 (0.01s)\n=== RUN TestMod_4_4\n--- PASS: TestMod_4_4 (0.01s)\n=== RUN TestMod_4_5\n--- PASS: TestMod_4_5 (0.01s)\n=== RUN TestMod_4_6\n--- PASS: TestMod_4_6 (0.01s)\n=== RUN TestMod_4_7\n--- PASS: TestMod_4_7 (0.01s)\n=== RUN TestMod_4_8\n--- PASS: TestMod_4_8 (0.01s)\n=== RUN TestMod_4_9\n--- PASS: TestMod_4_9 (0.01s)\n=== RUN TestMod_4_10\n--- PASS: TestMod_4_10 (0.01s)\n=== RUN TestMod_4_11\n--- PASS: TestMod_4_11 (0.01s)"
+    },
+    {
+      "turn_id": 19,
+      "entry_id": "entry_019",
+      "role": "user",
+      "content": "跑一下第 6 组模块例行检查。"
+    },
+    {
+      "turn_id": 20,
+      "entry_id": "entry_020",
+      "role": "tool",
+      "tool_call_id": "call_pad_5",
+      "content": "=== RUN TestMod_5_0\n--- PASS: TestMod_5_0 (0.01s)\n=== RUN TestMod_5_1\n--- PASS: TestMod_5_1 (0.01s)\n=== RUN TestMod_5_2\n--- PASS: TestMod_5_2 (0.01s)\n=== RUN TestMod_5_3\n--- PASS: TestMod_5_3 (0.01s)\n=== RUN TestMod_5_4\n--- PASS: TestMod_5_4 (0.01s)\n=== RUN TestMod_5_5\n--- PASS: TestMod_5_5 (0.01s)\n=== RUN TestMod_5_6\n--- PASS: TestMod_5_6 (0.01s)\n=== RUN TestMod_5_7\n--- PASS: TestMod_5_7 (0.01s)\n=== RUN TestMod_5_8\n--- PASS: TestMod_5_8 (0.01s)\n=== RUN TestMod_5_9\n--- PASS: TestMod_5_9 (0.01s)\n=== RUN TestMod_5_10\n--- PASS: TestMod_5_10 (0.01s)\n=== RUN TestMod_5_11\n--- PASS: TestMod_5_11 (0.01s)"
+    },
+    {
+      "turn_id": 21,
+      "entry_id": "entry_021",
+      "role": "user",
+      "content": "跑一下第 7 组模块例行检查。"
+    },
+    {
+      "turn_id": 22,
+      "entry_id": "entry_022",
+      "role": "tool",
+      "tool_call_id": "call_pad_6",
+      "content": "=== RUN TestMod_6_0\n--- PASS: TestMod_6_0 (0.01s)\n=== RUN TestMod_6_1\n--- PASS: TestMod_6_1 (0.01s)\n=== RUN TestMod_6_2\n--- PASS: TestMod_6_2 (0.01s)\n=== RUN TestMod_6_3\n--- PASS: TestMod_6_3 (0.01s)\n=== RUN TestMod_6_4\n--- PASS: TestMod_6_4 (0.01s)\n=== RUN TestMod_6_5\n--- PASS: TestMod_6_5 (0.01s)\n=== RUN TestMod_6_6\n--- PASS: TestMod_6_6 (0.01s)\n=== RUN TestMod_6_7\n--- PASS: TestMod_6_7 (0.01s)\n=== RUN TestMod_6_8\n--- PASS: TestMod_6_8 (0.01s)\n=== RUN TestMod_6_9\n--- PASS: TestMod_6_9 (0.01s)\n=== RUN TestMod_6_10\n--- PASS: TestMod_6_10 (0.01s)\n=== RUN TestMod_6_11\n--- PASS: TestMod_6_11 (0.01s)"
+    },
+    {
+      "turn_id": 23,
+      "entry_id": "entry_023",
+      "role": "user",
+      "content": "跑一下第 8 组模块例行检查。"
+    },
+    {
+      "turn_id": 24,
+      "entry_id": "entry_024",
+      "role": "tool",
+      "tool_call_id": "call_pad_7",
+      "content": "=== RUN TestMod_7_0\n--- PASS: TestMod_7_0 (0.01s)\n=== RUN TestMod_7_1\n--- PASS: TestMod_7_1 (0.01s)\n=== RUN TestMod_7_2\n--- PASS: TestMod_7_2 (0.01s)\n=== RUN TestMod_7_3\n--- PASS: TestMod_7_3 (0.01s)\n=== RUN TestMod_7_4\n--- PASS: TestMod_7_4 (0.01s)\n=== RUN TestMod_7_5\n--- PASS: TestMod_7_5 (0.01s)\n=== RUN TestMod_7_6\n--- PASS: TestMod_7_6 (0.01s)\n=== RUN TestMod_7_7\n--- PASS: TestMod_7_7 (0.01s)\n=== RUN TestMod_7_8\n--- PASS: TestMod_7_8 (0.01s)\n=== RUN TestMod_7_9\n--- PASS: TestMod_7_9 (0.01s)\n=== RUN TestMod_7_10\n--- PASS: TestMod_7_10 (0.01s)\n=== RUN TestMod_7_11\n--- PASS: TestMod_7_11 (0.01s)"
+    },
+    {
+      "turn_id": 25,
+      "entry_id": "entry_025",
+      "role": "user",
+      "content": "跑一下第 9 组模块例行检查。"
+    },
+    {
+      "turn_id": 26,
+      "entry_id": "entry_026",
+      "role": "tool",
+      "tool_call_id": "call_pad_8",
+      "content": "=== RUN TestMod_8_0\n--- PASS: TestMod_8_0 (0.01s)\n=== RUN TestMod_8_1\n--- PASS: TestMod_8_1 (0.01s)\n=== RUN TestMod_8_2\n--- PASS: TestMod_8_2 (0.01s)\n=== RUN TestMod_8_3\n--- PASS: TestMod_8_3 (0.01s)\n=== RUN TestMod_8_4\n--- PASS: TestMod_8_4 (0.01s)\n=== RUN TestMod_8_5\n--- PASS: TestMod_8_5 (0.01s)\n=== RUN TestMod_8_6\n--- PASS: TestMod_8_6 (0.01s)\n=== RUN TestMod_8_7\n--- PASS: TestMod_8_7 (0.01s)\n=== RUN TestMod_8_8\n--- PASS: TestMod_8_8 (0.01s)\n=== RUN TestMod_8_9\n--- PASS: TestMod_8_9 (0.01s)\n=== RUN TestMod_8_10\n--- PASS: TestMod_8_10 (0.01s)\n=== RUN TestMod_8_11\n--- PASS: TestMod_8_11 (0.01s)"
+    },
+    {
+      "turn_id": 27,
+      "entry_id": "entry_027",
+      "role": "user",
+      "content": "跑一下第 10 组模块例行检查。"
+    },
+    {
+      "turn_id": 28,
+      "entry_id": "entry_028",
+      "role": "tool",
+      "tool_call_id": "call_pad_9",
+      "content": "=== RUN TestMod_9_0\n--- PASS: TestMod_9_0 (0.01s)\n=== RUN TestMod_9_1\n--- PASS: TestMod_9_1 (0.01s)\n=== RUN TestMod_9_2\n--- PASS: TestMod_9_2 (0.01s)\n=== RUN TestMod_9_3\n--- PASS: TestMod_9_3 (0.01s)\n=== RUN TestMod_9_4\n--- PASS: TestMod_9_4 (0.01s)\n=== RUN TestMod_9_5\n--- PASS: TestMod_9_5 (0.01s)\n=== RUN TestMod_9_6\n--- PASS: TestMod_9_6 (0.01s)\n=== RUN TestMod_9_7\n--- PASS: TestMod_9_7 (0.01s)\n=== RUN TestMod_9_8\n--- PASS: TestMod_9_8 (0.01s)\n=== RUN TestMod_9_9\n--- PASS: TestMod_9_9 (0.01s)\n=== RUN TestMod_9_10\n--- PASS: TestMod_9_10 (0.01s)\n=== RUN TestMod_9_11\n--- PASS: TestMod_9_11 (0.01s)"
+    },
+    {
+      "turn_id": 29,
+      "entry_id": "entry_029",
+      "role": "user",
+      "content": "跑一下第 11 组模块例行检查。"
+    },
+    {
+      "turn_id": 30,
+      "entry_id": "entry_030",
+      "role": "tool",
+      "tool_call_id": "call_pad_10",
+      "content": "=== RUN TestMod_10_0\n--- PASS: TestMod_10_0 (0.01s)\n=== RUN TestMod_10_1\n--- PASS: TestMod_10_1 (0.01s)\n=== RUN TestMod_10_2\n--- PASS: TestMod_10_2 (0.01s)\n=== RUN TestMod_10_3\n--- PASS: TestMod_10_3 (0.01s)\n=== RUN TestMod_10_4\n--- PASS: TestMod_10_4 (0.01s)\n=== RUN TestMod_10_5\n--- PASS: TestMod_10_5 (0.01s)\n=== RUN TestMod_10_6\n--- PASS: TestMod_10_6 (0.01s)\n=== RUN TestMod_10_7\n--- PASS: TestMod_10_7 (0.01s)\n=== RUN TestMod_10_8\n--- PASS: TestMod_10_8 (0.01s)\n=== RUN TestMod_10_9\n--- PASS: TestMod_10_9 (0.01s)\n=== RUN TestMod_10_10\n--- PASS: TestMod_10_10 (0.01s)\n=== RUN TestMod_10_11\n--- PASS: TestMod_10_11 (0.01s)"
+    },
+    {
+      "turn_id": 31,
+      "entry_id": "entry_031",
+      "role": "user",
+      "content": "跑一下第 12 组模块例行检查。"
+    },
+    {
+      "turn_id": 32,
+      "entry_id": "entry_032",
+      "role": "tool",
+      "tool_call_id": "call_pad_11",
+      "content": "=== RUN TestMod_11_0\n--- PASS: TestMod_11_0 (0.01s)\n=== RUN TestMod_11_1\n--- PASS: TestMod_11_1 (0.01s)\n=== RUN TestMod_11_2\n--- PASS: TestMod_11_2 (0.01s)\n=== RUN TestMod_11_3\n--- PASS: TestMod_11_3 (0.01s)\n=== RUN TestMod_11_4\n--- PASS: TestMod_11_4 (0.01s)\n=== RUN TestMod_11_5\n--- PASS: TestMod_11_5 (0.01s)\n=== RUN TestMod_11_6\n--- PASS: TestMod_11_6 (0.01s)\n=== RUN TestMod_11_7\n--- PASS: TestMod_11_7 (0.01s)\n=== RUN TestMod_11_8\n--- PASS: TestMod_11_8 (0.01s)\n=== RUN TestMod_11_9\n--- PASS: TestMod_11_9 (0.01s)\n=== RUN TestMod_11_10\n--- PASS: TestMod_11_10 (0.01s)\n=== RUN TestMod_11_11\n--- PASS: TestMod_11_11 (0.01s)"
+    },
+    {
+      "turn_id": 33,
+      "entry_id": "entry_033",
+      "role": "user",
+      "content": "跑一下第 13 组模块例行检查。"
+    },
+    {
+      "turn_id": 34,
+      "entry_id": "entry_034",
+      "role": "tool",
+      "tool_call_id": "call_pad_12",
+      "content": "=== RUN TestMod_12_0\n--- PASS: TestMod_12_0 (0.01s)\n=== RUN TestMod_12_1\n--- PASS: TestMod_12_1 (0.01s)\n=== RUN TestMod_12_2\n--- PASS: TestMod_12_2 (0.01s)\n=== RUN TestMod_12_3\n--- PASS: TestMod_12_3 (0.01s)\n=== RUN TestMod_12_4\n--- PASS: TestMod_12_4 (0.01s)\n=== RUN TestMod_12_5\n--- PASS: TestMod_12_5 (0.01s)\n=== RUN TestMod_12_6\n--- PASS: TestMod_12_6 (0.01s)\n=== RUN TestMod_12_7\n--- PASS: TestMod_12_7 (0.01s)\n=== RUN TestMod_12_8\n--- PASS: TestMod_12_8 (0.01s)\n=== RUN TestMod_12_9\n--- PASS: TestMod_12_9 (0.01s)\n=== RUN TestMod_12_10\n--- PASS: TestMod_12_10 (0.01s)\n=== RUN TestMod_12_11\n--- PASS: TestMod_12_11 (0.01s)"
+    },
+    {
+      "turn_id": 35,
+      "entry_id": "entry_035",
+      "role": "user",
+      "content": "跑一下第 14 组模块例行检查。"
+    },
+    {
+      "turn_id": 36,
+      "entry_id": "entry_036",
+      "role": "tool",
+      "tool_call_id": "call_pad_13",
+      "content": "=== RUN TestMod_13_0\n--- PASS: TestMod_13_0 (0.01s)\n=== RUN TestMod_13_1\n--- PASS: TestMod_13_1 (0.01s)\n=== RUN TestMod_13_2\n--- PASS: TestMod_13_2 (0.01s)\n=== RUN TestMod_13_3\n--- PASS: TestMod_13_3 (0.01s)\n=== RUN TestMod_13_4\n--- PASS: TestMod_13_4 (0.01s)\n=== RUN TestMod_13_5\n--- PASS: TestMod_13_5 (0.01s)\n=== RUN TestMod_13_6\n--- PASS: TestMod_13_6 (0.01s)\n=== RUN TestMod_13_7\n--- PASS: TestMod_13_7 (0.01s)\n=== RUN TestMod_13_8\n--- PASS: TestMod_13_8 (0.01s)\n=== RUN TestMod_13_9\n--- PASS: TestMod_13_9 (0.01s)\n=== RUN TestMod_13_10\n--- PASS: TestMod_13_10 (0.01s)\n=== RUN TestMod_13_11\n--- PASS: TestMod_13_11 (0.01s)"
+    }
+  ],
+  "eval_probes": [
+    {
+      "probe_id": "probe_suite_b_09_implicit_auth_override",
+      "at_turn": 36,
+      "query": "帮我实现回调接口的鉴权中间件。",
+      "required_evidence_entry_ids": [
+        "entry_007"
+      ],
+      "forbidden_superseded_entry_ids": [
+        "entry_001"
+      ],
+      "expected_rubric": [
+        "使用 Authorization Bearer OAuth2 校验",
+        "不得使用 X-API-Key"
+      ],
+      "deterministic_checks": {
+        "must_not_match_regex": [
+          "X-API-Key"
+        ]
+      }
+    }
+  ]
+}
