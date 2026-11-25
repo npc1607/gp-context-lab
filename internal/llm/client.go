@@ -125,9 +125,10 @@ func (c *OpenAIClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse,
 			} `json:"message"`
 		} `json:"choices"`
 		Usage struct {
-			PromptTokens        int `json:"prompt_tokens"`
-			CompletionTokens    int `json:"completion_tokens"`
-			PromptTokensDetails struct {
+			PromptTokens         int `json:"prompt_tokens"`
+			CompletionTokens     int `json:"completion_tokens"`
+			PromptCacheHitTokens int `json:"prompt_cache_hit_tokens"` // DeepSeek prefix cache hit field
+			PromptTokensDetails  struct {
 				CachedTokens int `json:"cached_tokens"`
 			} `json:"prompt_tokens_details"`
 		} `json:"usage"`
@@ -138,12 +139,16 @@ func (c *OpenAIClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse,
 	if len(parsed.Choices) == 0 {
 		return ChatResponse{}, fmt.Errorf("openai response had no choices")
 	}
+	cached := parsed.Usage.PromptTokensDetails.CachedTokens
+	if cached == 0 && parsed.Usage.PromptCacheHitTokens > 0 {
+		cached = parsed.Usage.PromptCacheHitTokens
+	}
 	return ChatResponse{
 		Content: parsed.Choices[0].Message.Content,
 		Usage: Usage{
 			InputTokens:     parsed.Usage.PromptTokens,
 			OutputTokens:    parsed.Usage.CompletionTokens,
-			CacheReadTokens: parsed.Usage.PromptTokensDetails.CachedTokens,
+			CacheReadTokens: cached,
 		},
 		LatencyMs: float64(time.Since(start).Microseconds()) / 1000.0,
 	}, nil

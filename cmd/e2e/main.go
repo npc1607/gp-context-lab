@@ -55,9 +55,11 @@ func main() {
 	var (
 		datasetsDir   = flag.String("datasets", "./datasets", "benchmark dataset directory")
 		strategiesStr = flag.String("strategies", "B0,B1,B2,E4-A,E4-B", "comma-separated strategies to evaluate end-to-end")
-		providerFlag  = flag.String("provider", "mock", "generation LLM provider: mock | openai | anthropic")
+		providerFlag  = flag.String("provider", "mock", "generation LLM provider: mock | openai | anthropic | deepseek | qcoder")
+		baseURLFlag   = flag.String("base-url", "", "optional custom base URL override for generation provider")
 		modelFlag     = flag.String("model", "gpt-4o-mini", "generation model name")
 		judgeProvFlag = flag.String("judge-provider", "", "judge LLM provider (defaults to -provider)")
+		judgeBaseURL  = flag.String("judge-base-url", "", "optional custom base URL override for judge provider")
 		judgeModel    = flag.String("judge-model", "", "judge model name (defaults to -model)")
 		extractorFlag = flag.String("extractor", "heuristic", "heuristic | oracle")
 		epochFlag     = flag.Int("epoch", 16, "epoch stride for E4")
@@ -84,12 +86,12 @@ func main() {
 		cases = cases[:*limitCases]
 	}
 
-	genClient, err := buildClient(*providerFlag, *cacheDir, false)
+	genClient, err := buildClient(*providerFlag, *baseURLFlag, *cacheDir, false)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "init gen client: %v\n", err)
 		os.Exit(1)
 	}
-	judgeClient, err := buildClient(*judgeProvFlag, *cacheDir, true)
+	judgeClient, err := buildClient(*judgeProvFlag, *judgeBaseURL, *cacheDir, true)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "init judge client: %v\n", err)
 		os.Exit(1)
@@ -272,7 +274,7 @@ func toChatRequest(model, system string, asm strategy.PromptAssembly) llm.ChatRe
 	}
 }
 
-func buildClient(provider, cacheDir string, isJudge bool) (llm.Client, error) {
+func buildClient(provider, customBaseURL, cacheDir string, isJudge bool) (llm.Client, error) {
 	var inner llm.Client
 	switch strings.ToLower(strings.TrimSpace(provider)) {
 	case "mock":
@@ -282,14 +284,34 @@ func buildClient(provider, cacheDir string, isJudge bool) (llm.Client, error) {
 			inner = &llm.MockClient{Responder: mockGenResponder}
 		}
 		return inner, nil
-	case "openai":
-		key := os.Getenv("OPENAI_API_KEY")
-		base := os.Getenv("OPENAI_BASE_URL")
+	case "deepseek":
+		key := firstNonEmpty(os.Getenv("DEEPSEEK_API_KEY"), os.Getenv("OPENAI_API_KEY"))
+		base := firstNonEmpty(customBaseURL, os.Getenv("DEEPSEEK_BASE_URL"), "https://api.deepseek.com/v1")
 		if isJudge && os.Getenv("JUDGE_API_KEY") != "" {
 			key = os.Getenv("JUDGE_API_KEY")
-			if os.Getenv("JUDGE_BASE_URL") != "" {
-				base = os.Getenv("JUDGE_BASE_URL")
-			}
+			base = firstNonEmpty(customBaseURL, os.Getenv("JUDGE_BASE_URL"), base)
+		}
+		if key == "" {
+			return nil, fmt.Errorf("DEEPSEEK_API_KEY (or OPENAI_API_KEY) is required for provider=deepseek")
+		}
+		inner = llm.NewOpenAIClient(base, key)
+	case "qcoder", "qwen":
+		key := firstNonEmpty(os.Getenv("QCODER_API_KEY"), os.Getenv("DASHSCOPE_API_KEY"), os.Getenv("OPENAI_API_KEY"))
+		base := firstNonEmpty(customBaseURL, os.Getenv("QCODER_BASE_URL"), os.Getenv("DASHSCOPE_BASE_URL"), "https://dashscope.aliyuncs.com/compatible-mode/v1")
+		if isJudge && os.Getenv("JUDGE_API_KEY") != "" {
+			key = os.Getenv("JUDGE_API_KEY")
+			base = firstNonEmpty(customBaseURL, os.Getenv("JUDGE_BASE_URL"), base)
+		}
+		if key == "" {
+			return nil, fmt.Errorf("QCODER_API_KEY (or DASHSCOPE_API_KEY) is required for provider=qcoder")
+		}
+		inner = llm.NewOpenAIClient(base, key)
+	case "openai":
+		key := os.Getenv("OPENAI_API_KEY")
+		base := firstNonEmpty(customBaseURL, os.Getenv("OPENAI_BASE_URL"))
+		if isJudge && os.Getenv("JUDGE_API_KEY") != "" {
+			key = os.Getenv("JUDGE_API_KEY")
+			base = firstNonEmpty(customBaseURL, os.Getenv("JUDGE_BASE_URL"), base)
 		}
 		if key == "" {
 			return nil, fmt.Errorf("OPENAI_API_KEY (or JUDGE_API_KEY) is required for provider=openai")
@@ -297,7 +319,7 @@ func buildClient(provider, cacheDir string, isJudge bool) (llm.Client, error) {
 		inner = llm.NewOpenAIClient(base, key)
 	case "anthropic":
 		key := os.Getenv("ANTHROPIC_API_KEY")
-		base := os.Getenv("ANTHROPIC_BASE_URL")
+		base := firstNonEmpty(customBaseURL, os.Getenv("ANTHROPIC_BASE_URL"))
 		if isJudge && os.Getenv("JUDGE_API_KEY") != "" {
 			key = os.Getenv("JUDGE_API_KEY")
 		}
@@ -309,6 +331,15 @@ func buildClient(provider, cacheDir string, isJudge bool) (llm.Client, error) {
 		return nil, fmt.Errorf("unknown provider %q", provider)
 	}
 	return llm.NewCachedClient(inner, cacheDir), nil
+}
+
+func firstNonEmpty(vals ...string) string {
+	for _, v := range vals {
+		if strings.TrimSpace(v) != "" {
+			return strings.TrimSpace(v)
+		}
+	}
+	return ""
 }
 
 func mockGenResponder(req llm.ChatRequest) string {
