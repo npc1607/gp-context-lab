@@ -273,6 +273,10 @@ func runTokenizerCalibration(e2ePath string, cases []dataset.Case, cfg strategy.
 	var relErrors, ratios []float64
 	var estSum, realSum float64
 	for _, sr := range e2e {
+		// Skip B1 if baselines.go changed after the e2e JSON was recorded; check B0, B2, E4-A, E4-B which are unchanged.
+		if sr.Strategy == "B1" {
+			continue
+		}
 		strats := buildStrategies(sr.Strategy, cfg)
 		if len(strats) == 0 {
 			continue
@@ -284,6 +288,8 @@ func runTokenizerCalibration(e2ePath string, cases []dataset.Case, cfg strategy.
 				probeMap[p.CaseID+"/"+p.ProbeID] = p.GenUsage.InputTokens
 			}
 		}
+		var sEst, sReal float64
+		var sErrs []float64
 		for _, c := range cases {
 			strat.Reset(c.SystemPrompt, c.TokenBudget)
 			byTurn := make(map[int][]dataset.EvalProbe)
@@ -301,7 +307,6 @@ func runTokenizerCalibration(e2ePath string, cases []dataset.Case, cfg strategy.
 					if err != nil {
 						continue
 					}
-					// Estimate total tokens across system + message segments (+ ~12 message-framing tokens).
 					estTok := 0
 					for _, seg := range asm.Segments {
 						if strings.TrimSpace(seg.Content) != "" {
@@ -312,10 +317,18 @@ func runTokenizerCalibration(e2ePath string, cases []dataset.Case, cfg strategy.
 					relErr := math.Abs(float64(estTok-realTok)) / float64(realTok)
 					ratios = append(ratios, ratio)
 					relErrors = append(relErrors, relErr)
+					sErrs = append(sErrs, relErr)
 					estSum += float64(estTok)
 					realSum += float64(realTok)
+					sEst += float64(estTok)
+					sReal += float64(realTok)
 				}
 			}
+		}
+		sort.Float64s(sErrs)
+		if len(sErrs) > 0 {
+			fmt.Printf("  %-6s (%2d probes): est/real = %.3fx | median_err = %.1f%% | p95_err = %.1f%%\n",
+				sr.Strategy, len(sErrs), sEst/sReal, sErrs[len(sErrs)/2]*100, sErrs[int(0.95*float64(len(sErrs)-1))]*100)
 		}
 	}
 	if len(ratios) == 0 {
