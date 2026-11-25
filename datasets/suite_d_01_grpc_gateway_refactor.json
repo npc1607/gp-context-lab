@@ -897,9 +897,15 @@
         "引用离线 VPC 与 Dockerfile 内网构建环境"
       ],
       "deterministic_checks": {
+        "must_match_any_regex": [
+          "不可行",
+          "禁止",
+          "不能",
+          "拒绝"
+        ],
         "must_not_match_regex": [
           "可以直接下载",
-          "可行"
+          "(?:^|[^不])可行"
         ]
       }
     }
