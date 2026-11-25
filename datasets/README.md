@@ -2,11 +2,11 @@
 
 本目录存放面向 [`gp`](https://github.com/npc1607/gp) 上下文权重与缓存优化实验的评测用例，所有用例均符合 [`case.schema.json`](case.schema.json) 规范。
 
-> 注：除快速演示示例 [`sample-multihop-case.json`](sample-multihop-case.json)（8 轮精简版）外，18 个正式基准用例均构造了 **34–46 轮对话**、累计体积达 **3.7x–6.9x `token_budget`**，确保任何“全量塞入”或“仅看近期 5–8 轮窗口”的朴素策略都会失效，从而有效区分各组数学工具的真实能力。
+> 注：除快速演示示例 [`sample-multihop-case.json`](sample-multihop-case.json)（8 轮精简版）外，Suite A/B/C 共 18 个精标基准用例均构造了 **34–46 轮对话**、累计体积达 **3.7x–6.9x `token_budget`**；Suite D 共 5 个长会话回放用例构造了 **98–138 轮对话**、累计体积达 **40k+ tokens**，确保任何“全量塞入”或“仅看近期 5–8 轮窗口”的朴素策略都会暴露真实瓶颈，从而有效区分各组数学工具的真实能力。
 
 ---
 
-## 套件分类与用例清单（共 19 个）
+## 套件分类与用例清单（共 24 个）
 
 ### 0. 入门示例
 - [`sample-multihop-case.json`](sample-multihop-case.json)：8 轮复合示例（离线 VPC 构建 + MySQL 切 PostgreSQL）。
@@ -37,3 +37,11 @@
 4. [`suite_c_04_k8s_metrics_vs_gomemlimit.json`](suite_c_04_k8s_metrics_vs_gomemlimit.json)（34 轮 / 4168 tok vs 800 预算）：SHA256 digest / Prometheus 直方图 + 探针复读掩埋“512Mi 容器缺 `GOMEMLIMIT`”根因。
 5. [`suite_c_05_sql_explain_and_lint_loop.json`](suite_c_05_sql_explain_and_lint_loop.json)（34 轮 / 3268 tok vs 800 预算）：SQL `EXPLAIN` 随机数值树 + unused-var lint 复读掩埋 `(tenant_id, status, created_at)` 最左前缀规则。
 6. [`suite_c_06_ci_hashes_vs_license_redline.json`](suite_c_06_ci_hashes_vs_license_redline.json)（34 轮 / 3475 tok vs 800 预算）：CI SHA512 下载刷屏日志 + 依赖补丁小升级复读掩埋“禁引入 GPL/AGPL-3.0”法务红线。
+
+### 4. Suite D：长会话回放与真实含缓存账单（`suite_d_replay`，5 个，98–138 轮）
+专测 **Epoch 冻结掩码 + Prompt 拼接顺序（`E4-A` vs `E4-B`）** 在百轮级长会话中的真实缓存命中率、含缓存总账单降幅与长程多跳/抗污染稳定性：
+1. [`suite_d_01_grpc_gateway_refactor.json`](suite_d_01_grpc_gateway_refactor.json)（98 轮 / 2400 预算）：gRPC Gateway 重构、REST JSON 切 Protobuf 及离线 VPC 多跳红线。
+2. [`suite_d_02_k8s_oom_incident_replay.json`](suite_d_02_k8s_oom_incident_replay.json)（110 轮 / 2400 预算）：K8s OOM 排障、缓存切 Redis Cluster 及只读根文件系统多跳排障。
+3. [`suite_d_03_pg_partition_migration.json`](suite_d_03_pg_partition_migration.json)（118 轮 / 2400 预算）：PostgreSQL 16 分区在线迁移与废弃 MySQL 8.0 抗污染验证。
+4. [`suite_d_04_ci_runner_cache_debug.json`](suite_d_04_ci_runner_cache_debug.json)（130 轮 / 2400 预算）：ARM64 纯静态零 CGO 构建红线跨文件多跳关联与长 CI 日志回放。
+5. [`suite_d_05_multi_tenant_rate_limiter.json`](suite_d_05_multi_tenant_rate_limiter.json)（138 轮 / 2400 预算）：Redis Cluster 同槽位 Hash Tag 约束跨文件关联与鉴权演进。

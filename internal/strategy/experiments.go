@@ -48,6 +48,13 @@ type ExperimentalStrategy struct {
 	// Cached ledger prefix to preserve byte stability when unchanged.
 	lastLedgerVer  int
 	lastLedgerText string
+
+	// Cached working set across non-query continuation steps within an Epoch (E4).
+	lastWSQuery  string
+	lastWSEpoch  int
+	lastWSChosen []algo.Candidate
+	lastWSText   string
+	lastWSToks   int
 }
 
 func NewE1MMR(cfg Config) *ExperimentalStrategy {
@@ -103,6 +110,11 @@ func (s *ExperimentalStrategy) Reset(systemPrompt string, tokenBudget int) {
 	s.entityHist = make(map[string][]int)
 	s.lastLedgerVer = -1
 	s.lastLedgerText = ""
+	s.lastWSQuery = ""
+	s.lastWSEpoch = -1
+	s.lastWSChosen = nil
+	s.lastWSText = ""
+	s.lastWSToks = 0
 }
 
 func (s *ExperimentalStrategy) OnTurn(turn dataset.Turn) error {
@@ -323,38 +335,59 @@ func (s *ExperimentalStrategy) BuildPrompt(query string, atTurn int) (PromptAsse
 		}
 	}
 
-	// 4. Select diverse subset within recall budget.
+	// 4. Select diverse subset within recall budget (E4 reuses working set during continuation steps inside the same Epoch).
 	recallBudget := s.tokenBudget - ledgerToks - recentTokens
 	if recallBudget < 160 {
 		recallBudget = s.tokenBudget / 2
 	}
+	curEpoch := 0
+	if s.cfg.Epoch > 0 && n > 0 {
+		curEpoch = (n - 1) / s.cfg.Epoch
+	}
 	var chosen []algo.Candidate
-	switch {
-	case s.variant.useKDPP:
-		chosen = algo.SelectBudgetedKDPP(cands, recallBudget, s.cfg.Eta)
-	case s.variant.useMMR:
-		chosen = algo.SelectBudgetedMMR(cands, recallBudget, s.cfg.Lambda, s.cfg.Eta)
-	default:
-		used := 0
-		for _, c := range cands {
-			if c.Tokens > 0 && used+c.Tokens <= recallBudget {
-				chosen = append(chosen, c)
-				used += c.Tokens
+	var wsText string
+	var wsToks int
+	if s.variant.useEpochMask && query == "continue" && s.lastWSEpoch == curEpoch && s.lastWSChosen != nil {
+		chosen = s.lastWSChosen
+		wsText = s.lastWSText
+		wsToks = s.lastWSToks
+	} else {
+		switch {
+		case s.variant.useKDPP:
+			chosen = algo.SelectBudgetedKDPP(cands, recallBudget, s.cfg.Eta)
+		case s.variant.useMMR:
+			chosen = algo.SelectBudgetedMMR(cands, recallBudget, s.cfg.Lambda, s.cfg.Eta)
+		default:
+			used := 0
+			for _, c := range cands {
+				if c.Tokens > 0 && used+c.Tokens <= recallBudget {
+					chosen = append(chosen, c)
+					used += c.Tokens
+				}
 			}
+		}
+
+		// Sort chosen working-set entries in chronological turn order for coherent reading.
+		sort.Slice(chosen, func(i, j int) bool {
+			return chosen[i].TurnIdx < chosen[j].TurnIdx
+		})
+		for _, c := range chosen {
+			wsToks += c.Tokens
+		}
+		wsText = formatWorkingSet(chosen, s.turns)
+		if s.variant.useEpochMask {
+			s.lastWSQuery = query
+			s.lastWSEpoch = curEpoch
+			s.lastWSChosen = chosen
+			s.lastWSText = wsText
+			s.lastWSToks = wsToks
 		}
 	}
 
-	// Sort chosen working-set entries in chronological turn order for coherent reading.
-	sort.Slice(chosen, func(i, j int) bool {
-		return chosen[i].TurnIdx < chosen[j].TurnIdx
-	})
-	wsToks := 0
 	wsIDs := make([]string, 0, len(chosen))
 	for _, c := range chosen {
-		wsToks += c.Tokens
 		wsIDs = append(wsIDs, c.EntryID)
 	}
-	wsText := formatWorkingSet(chosen, s.turns)
 
 	// 5. Assemble segments (respecting E4-A vs E4-B cache layout ordering).
 	segs := []PromptSegment{makeSystemSegment(s.systemPrompt, s.cfg.BaseToolsTokens)}

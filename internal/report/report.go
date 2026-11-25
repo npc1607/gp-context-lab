@@ -21,6 +21,11 @@ type StrategyResult struct {
 	SuiteBRecall           float64 `json:"suite_b_recall"`
 	SuiteBContamination    float64 `json:"suite_b_contamination"`
 	SuiteCRecall           float64 `json:"suite_c_recall"`
+	SuiteDRecall           float64 `json:"suite_d_recall"`
+	SuiteDInputTokens      int     `json:"suite_d_input_tokens"`
+	SuiteDCacheReadTokens  int     `json:"suite_d_cache_read_tokens"`
+	SuiteDCacheHitRatio    float64 `json:"suite_d_cache_hit_ratio"`
+	SuiteDAnthropicCost    float64 `json:"suite_d_anthropic_cost"`
 	SuiteDCostVsB0         float64 `json:"suite_d_cost_reduction_vs_b0"`
 	HasSuiteD              bool    `json:"has_suite_d"`
 	OverallRecall          float64 `json:"overall_recall"`
@@ -46,12 +51,13 @@ type StrategyResult struct {
 
 // ComputeRelativeCosts fills token and cost reduction vs B0 across all strategy results.
 func ComputeRelativeCosts(results []StrategyResult) {
-	var b0Anthropic, b0OpenAI float64
+	var b0Anthropic, b0OpenAI, b0SuiteD float64
 	var b0Tokens int
 	for _, r := range results {
 		if r.Strategy == "B0" {
 			b0Anthropic = r.AnthropicCostIndex
 			b0OpenAI = r.OpenAICostIndex
+			b0SuiteD = r.SuiteDAnthropicCost
 			b0Tokens = r.TotalInputTokens
 			break
 		}
@@ -65,13 +71,16 @@ func ComputeRelativeCosts(results []StrategyResult) {
 		}
 		results[i].AnthropicCostVsB0 = 1.0 - results[i].AnthropicCostIndex/b0Anthropic
 		results[i].OpenAICostVsB0 = 1.0 - results[i].OpenAICostIndex/b0OpenAI
+		if b0SuiteD > 0 {
+			results[i].SuiteDCostVsB0 = 1.0 - results[i].SuiteDAnthropicCost/b0SuiteD
+		}
 	}
 }
 
 // AggregateSuiteMetrics populates suite averages from ProbeDetails.
 func (r *StrategyResult) AggregateSuiteMetrics(latencies []float64) {
-	var aSum, aBridgeSum, bRecSum, bContamSum, cSum, allSum, redSum float64
-	var aN, bN, cN int
+	var aSum, aBridgeSum, bRecSum, bContamSum, cSum, dSum, allSum, redSum float64
+	var aN, bN, cN, dN int
 	for _, p := range r.ProbeDetails {
 		allSum += p.EvidenceRecall
 		redSum += p.Redundancy
@@ -89,6 +98,8 @@ func (r *StrategyResult) AggregateSuiteMetrics(latencies []float64) {
 			cN++
 		case string(dataset.SuiteReplay):
 			r.HasSuiteD = true
+			dSum += p.EvidenceRecall
+			dN++
 		}
 	}
 	if aN > 0 {
@@ -102,6 +113,9 @@ func (r *StrategyResult) AggregateSuiteMetrics(latencies []float64) {
 	if cN > 0 {
 		r.SuiteCRecall = cSum / float64(cN)
 	}
+	if dN > 0 {
+		r.SuiteDRecall = dSum / float64(dN)
+	}
 	if len(r.ProbeDetails) > 0 {
 		r.OverallRecall = allSum / float64(len(r.ProbeDetails))
 		r.MeanRedundancy = redSum / float64(len(r.ProbeDetails))
@@ -110,31 +124,35 @@ func (r *StrategyResult) AggregateSuiteMetrics(latencies []float64) {
 		r.RawLCPRatio = float64(r.TotalLCPTokens) / float64(r.TotalInputTokens)
 		r.SimulatedCacheHitRatio = float64(r.TotalCacheReadTokens) / float64(r.TotalInputTokens)
 	}
+	if r.SuiteDInputTokens > 0 {
+		r.SuiteDCacheHitRatio = float64(r.SuiteDCacheReadTokens) / float64(r.SuiteDInputTokens)
+	}
 	r.LatencyP50Ms, r.LatencyP95Ms, r.LatencyP99Ms = metrics.Percentiles(latencies)
 }
 
 // PrintTable writes a formatted comparison table and Go/No-Go gate check to w.
 func PrintTable(w io.Writer, results []StrategyResult) {
-	fmt.Fprintln(w, "=====================================================================================================================================")
-	fmt.Fprintf(w, "%-10s | %-8s | %-8s | %-8s | %-8s | %-8s | %-8s | %-9s | %-8s | %-8s | %-8s\n",
-		"Strategy", "SuiteA%", "Bridge%", "SuiteB%", "Contam%", "SuiteC%", "TokDrop", "CacheHit%", "CostDrop", "Redund", "p95(ms)")
-	fmt.Fprintln(w, "-------------------------------------------------------------------------------------------------------------------------------------")
+	fmt.Fprintln(w, "====================================================================================================================================================")
+	fmt.Fprintf(w, "%-10s | %-7s | %-7s | %-7s | %-7s | %-7s | %-7s | %-7s | %-8s | %-8s | %-8s | %-7s\n",
+		"Strategy", "SuiteA%", "Bridge%", "SuiteB%", "Contam%", "SuiteC%", "SuiteD%", "TokDrop", "CacheHit%", "CostDrop", "D-CostDp", "p95(ms)")
+	fmt.Fprintln(w, "----------------------------------------------------------------------------------------------------------------------------------------------------")
 	for _, r := range results {
-		fmt.Fprintf(w, "%-10s | %7.1f%% | %7.1f%% | %7.1f%% | %7.1f%% | %7.1f%% | %7.1f%% | %8.1f%% | %7.1f%% | %8.3f | %8.2f\n",
+		fmt.Fprintf(w, "%-10s | %6.1f%% | %6.1f%% | %6.1f%% | %6.1f%% | %6.1f%% | %6.1f%% | %6.1f%% | %7.1f%% | %7.1f%% | %7.1f%% | %7.2f\n",
 			r.Strategy,
 			r.SuiteAMultihopRecall*100,
 			r.SuiteABridgeComplete*100,
 			r.SuiteBRecall*100,
 			r.SuiteBContamination*100,
 			r.SuiteCRecall*100,
+			r.SuiteDRecall*100,
 			r.TokenDropVsB0*100,
 			r.SimulatedCacheHitRatio*100,
 			r.AnthropicCostVsB0*100,
-			r.MeanRedundancy,
+			r.SuiteDCostVsB0*100,
 			r.LatencyP95Ms,
 		)
 	}
-	fmt.Fprintln(w, "=====================================================================================================================================")
+	fmt.Fprintln(w, "====================================================================================================================================================")
 	printGoNoGo(w, results)
 }
 
@@ -143,9 +161,22 @@ func printGoNoGo(w io.Writer, results []StrategyResult) {
 	for _, r := range results {
 		byName[r.Strategy] = r
 	}
-	target, ok := byName["E4-B"]
-	if !ok {
-		target, ok = byName["E4-A"]
+	a, hasA := byName["E4-A"]
+	b, hasB := byName["E4-B"]
+	var target StrategyResult
+	var ok bool
+	switch {
+	case hasA && hasB:
+		if a.SuiteDCostVsB0 >= b.SuiteDCostVsB0 {
+			target = a
+		} else {
+			target = b
+		}
+		ok = true
+	case hasA:
+		target, ok = a, true
+	case hasB:
+		target, ok = b, true
 	}
 	if !ok {
 		return
@@ -156,8 +187,8 @@ func printGoNoGo(w io.Writer, results []StrategyResult) {
 	passRecall := target.SuiteAMultihopRecall >= 0.85
 	passLift := !hasB2 || (target.SuiteAMultihopRecall-b2.SuiteAMultihopRecall) >= 0.25
 	passContam := target.SuiteBContamination < 0.05
-	passCost := target.AnthropicCostVsB0 >= 0.45
-	passCache := !hasB1 || target.SimulatedCacheHitRatio >= b1.SimulatedCacheHitRatio
+	passCost := target.SuiteDCostVsB0 >= 0.45
+	passCache := !hasB1 || target.SuiteDCacheHitRatio >= b1.SuiteDCacheHitRatio
 	passLatency := target.LatencyP95Ms <= 30.0
 
 	mark := func(ok bool) string {
@@ -173,7 +204,7 @@ func printGoNoGo(w io.Writer, results []StrategyResult) {
 		mark(passContam), target.SuiteBContamination*100)
 	if target.HasSuiteD {
 		fmt.Fprintf(w, "  %s Suite D Cost vs B0 >= 45%% drop (actual %.1f%%) & CacheHit >= B1 (%.1f%% vs %.1f%%)\n",
-			mark(passCost && passCache), target.AnthropicCostVsB0*100, target.SimulatedCacheHitRatio*100, b1.SimulatedCacheHitRatio*100)
+			mark(passCost && passCache), target.SuiteDCostVsB0*100, target.SuiteDCacheHitRatio*100, b1.SuiteDCacheHitRatio*100)
 	} else {
 		fmt.Fprintf(w, "  [INFO] Suite D not present yet (current synthetic 34-46t suites: TokDrop %.1f%%, CacheHit %.1f%% vs B1 %.1f%%, CostDrop %.1f%%)\n",
 			target.TokenDropVsB0*100, target.SimulatedCacheHitRatio*100, b1.SimulatedCacheHitRatio*100, target.AnthropicCostVsB0*100)

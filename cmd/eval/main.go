@@ -144,7 +144,7 @@ func runStrategy(strat strategy.ContextStrategy, cases []dataset.Case, minCacheT
 					if err == nil {
 						latencies = append(latencies, bm.TotalMs)
 						cs := sim.Step(asm.FlattenTokens())
-						accumulateCache(&res, cs)
+						accumulateCache(&res, c.Suite, cs)
 					}
 				}
 			}
@@ -157,7 +157,7 @@ func runStrategy(strat strategy.ContextStrategy, cases []dataset.Case, minCacheT
 				}
 				latencies = append(latencies, bm.TotalMs)
 				cs := sim.Step(asm.FlattenTokens())
-				accumulateCache(&res, cs)
+				accumulateCache(&res, c.Suite, cs)
 
 				pm := metrics.EvalLayer1(
 					c, probe,
@@ -175,10 +175,15 @@ func runStrategy(strat strategy.ContextStrategy, cases []dataset.Case, minCacheT
 	return res
 }
 
-func accumulateCache(res *report.StrategyResult, cs cache.TurnCacheStats) {
+func accumulateCache(res *report.StrategyResult, suite dataset.SuiteType, cs cache.TurnCacheStats) {
 	res.TotalInputTokens += cs.TotalInputTokens
 	res.TotalLCPTokens += cs.LCPTokens
 	res.TotalCacheReadTokens += cs.CacheReadTokens
 	res.AnthropicCostIndex += cs.AnthropicCost
 	res.OpenAICostIndex += cs.OpenAICost
+	if suite == dataset.SuiteReplay {
+		res.SuiteDInputTokens += cs.TotalInputTokens
+		res.SuiteDCacheReadTokens += cs.CacheReadTokens
+		res.SuiteDAnthropicCost += cs.AnthropicCost
+	}
 }
