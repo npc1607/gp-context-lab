@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "GPContextBenchmarkCase",
+  "description": "面向 gp 上下文权重与缓存效率实验的基准测试用例格式",
+  "type": "object",
+  "required": ["case_id", "suite", "title", "description", "system_prompt", "turns", "eval_probes"],
+  "properties": {
+    "case_id": {
+      "type": "string",
+      "description": "唯一用例标识，例如 suite_a_001"
+    },
+    "suite": {
+      "type": "string",
+      "enum": ["suite_a_multihop", "suite_b_conflict", "suite_c_noise", "suite_d_replay"],
+      "description": "所属实验套件类别"
+    },
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "system_prompt": {
+      "type": "string"
+    },
+    "token_budget": {
+      "type": "integer",
+      "default": 8000,
+      "description": "召回工作集阶段允许的最大 Token 预算"
+    },
+    "turns": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["turn_id", "entry_id", "role", "content"],
+        "properties": {
+          "turn_id": { "type": "integer", "minimum": 1 },
+          "entry_id": { "type": "string" },
+          "role": { "type": "string", "enum": ["user", "assistant", "tool"] },
+          "content": { "type": "string" },
+          "tool_calls": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "name", "arguments"],
+              "properties": {
+                "id": { "type": "string" },
+                "name": { "type": "string" },
+                "arguments": { "type": "string" }
+              }
+            }
+          },
+          "tool_call_id": { "type": "string" },
+          "mentioned_entities": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "可选黄金实体标注，用于验证实体抽取器精度"
+          },
+          "constraint_event": {
+            "type": "object",
+            "description": "可选：本轮产生的约束变更真值",
+            "properties": {
+              "action": { "type": "string", "enum": ["add", "supersede", "resolve"] },
+              "constraint_id": { "type": "string" },
+              "supersedes": { "type": "string" },
+              "statement": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "eval_probes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["probe_id", "at_turn", "query", "required_evidence_entry_ids", "expected_rubric"],
+        "properties": {
+          "probe_id": { "type": "string" },
+          "at_turn": { "type": "integer", "description": "在哪一轮之后发起该测试提问" },
+          "query": { "type": "string" },
+          "required_evidence_entry_ids": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "回答该问题必须召回的源历史条目 ID"
+          },
+          "forbidden_superseded_entry_ids": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "已被推翻、不应作为现行约束混入回答的旧条目 ID"
+          },
+          "expected_rubric": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "LLM-as-a-Judge 或确定性检查的得分要点"
+          }
+        }
+      }
+    }
+  }
+}

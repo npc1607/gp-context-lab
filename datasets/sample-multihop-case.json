@@ -1,0 +1,119 @@
+{
+  "case_id": "suite_a_001_isolated_build_and_db_switch",
+  "suite": "suite_a_multihop",
+  "title": "隐性多跳关联 + 数据库选型变更复合验证用例（精简示例）",
+  "description": "验证早期内网隔离约束（无网络字面词）通过 Dockerfile 与构建脚本多跳关联到末轮排障，同时验证数据库从 MySQL 切换为 PostgreSQL 后不再污染最终 SQL 生成。",
+  "system_prompt": "You are gp, a high-performance Go coding and ops agent.",
+  "token_budget": 4000,
+  "turns": [
+    {
+      "turn_id": 1,
+      "entry_id": "entry_001",
+      "role": "user",
+      "content": "注意：本次项目所有生产与构建节点都在办公网离线 VPC 里，任何脚本和容器阶段都不能访问公网下载依赖。",
+      "mentioned_entities": ["offline_vpc", "container_build"],
+      "constraint_event": {
+        "action": "add",
+        "constraint_id": "cst_net_01",
+        "statement": "所有构建与运行节点处于离线 VPC，禁止访问公网下载依赖"
+      }
+    },
+    {
+      "turn_id": 2,
+      "entry_id": "entry_002",
+      "role": "assistant",
+      "content": "收到，后续排查与脚本改造都会严格遵守离线构建环境限制。"
+    },
+    {
+      "turn_id": 3,
+      "entry_id": "entry_003",
+      "role": "user",
+      "content": "数据存储先按 MySQL 8.0 来设计，表结构放在 migrations/ 下。",
+      "mentioned_entities": ["mysql", "migrations/"],
+      "constraint_event": {
+        "action": "add",
+        "constraint_id": "cst_db_01",
+        "statement": "主数据库采用 MySQL 8.0"
+      }
+    },
+    {
+      "turn_id": 4,
+      "entry_id": "entry_004",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_read_df",
+          "name": "read",
+          "arguments": "{\"path\":\"deploy/Dockerfile\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 5,
+      "entry_id": "entry_005",
+      "role": "tool",
+      "tool_call_id": "call_read_df",
+      "content": "FROM internal-registry.local/golang:1.23\nENV GOPROXY=https://goproxy.internal.local,direct\nCOPY . /src\nWORKDIR /src\nRUN go build -mod=vendor ./cmd/server",
+      "mentioned_entities": ["deploy/Dockerfile", "internal-registry.local", "goproxy.internal.local", "cmd/server"]
+    },
+    {
+      "turn_id": 6,
+      "entry_id": "entry_006",
+      "role": "user",
+      "content": "架构评审改主意了：因为后面要重度使用 JSONB 索引和数组类型，正式环境全量切到 PostgreSQL 16，彻底放弃 MySQL，旧迁移脚本不再兼容。",
+      "mentioned_entities": ["postgresql", "jsonb", "migrations/"],
+      "constraint_event": {
+        "action": "supersede",
+        "constraint_id": "cst_db_02",
+        "supersedes": "cst_db_01",
+        "statement": "全量迁移至 PostgreSQL 16，废除 MySQL 8.0 兼容"
+      }
+    },
+    {
+      "turn_id": 7,
+      "entry_id": "entry_007",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_read_sh",
+          "name": "read",
+          "arguments": "{\"path\":\"scripts/build_image.sh\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 8,
+      "entry_id": "entry_008",
+      "role": "tool",
+      "tool_call_id": "call_read_sh",
+      "content": "#!/usr/bin/env bash\nset -euo pipefail\ndocker build -f deploy/Dockerfile -t app-server:latest .\n",
+      "mentioned_entities": ["scripts/build_image.sh", "deploy/Dockerfile", "app-server"]
+    }
+  ],
+  "eval_probes": [
+    {
+      "probe_id": "probe_multihop_offline",
+      "at_turn": 8,
+      "query": "我改了下 app-server 的打包方式，打算在构建阶段顺便直接从 GitHub Releases 拉取一个预编译插件二进制放进镜像，你看可行吗？",
+      "required_evidence_entry_ids": ["entry_001", "entry_005", "entry_008"],
+      "forbidden_superseded_entry_ids": [],
+      "expected_rubric": [
+        "明确拒绝从公网 GitHub Releases 拉取二进制的方案",
+        "指出构建节点处于离线 VPC（源自 entry_001）",
+        "建议改为通过内部制品库/镜像或 vendor 方式纳入构建（结合 deploy/Dockerfile 的内网环境）"
+      ]
+    },
+    {
+      "probe_id": "probe_superseded_db",
+      "at_turn": 8,
+      "query": "帮我写一条按标签列表过滤 metadata json 字段的查询 SQL。",
+      "required_evidence_entry_ids": ["entry_006"],
+      "forbidden_superseded_entry_ids": ["entry_003"],
+      "expected_rubric": [
+        "使用 PostgreSQL 16 的 JSONB 语法（如 @> / ->> / ?|），不得使用 MySQL 的 JSON_EXTRACT / JSON_CONTAINS 语法"
+      ]
+    }
+  ]
+}
