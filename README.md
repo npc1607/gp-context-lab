@@ -32,7 +32,8 @@ gp-context-lab/
 │   ├── 03-结构化工作集与防丢信息架构.md     # 不可变仓库 + 结构化约束账本 + 溯源回查协议设计
 │   ├── 04-实验设计与评测基准.md             # 4 类测试套件、8 组对照/消融实验、计费模型与验收门槛
 │   ├── 05-打分与评判机制设计.md             # 三层评分架构（检索层 / 硬断言 / Atomic Rubric 裁判 + 归因四象限）
-│   └── 06-Go离线评测Runner架构设计.md        # Phase 2 纯 Go 离线评测 Runner 架构、接口与缓存仿真设计
+│   ├── 06-Go离线评测Runner架构设计.md        # Phase 2 纯 Go 离线评测 Runner 架构、接口与缓存仿真设计
+│   └── 07-实验结果与准出评审报告.md         # Phase 2/3 全量实测数据、显著性检验与 Go/No-Go 准出结论
 └── datasets/
     ├── case.schema.json                   # 评测用例 JSON Schema 规范
     └── sample-multihop-case.json          # 多跳隐性关联 + 约束演进示例用例
@@ -48,6 +49,7 @@ gp-context-lab/
 4. [**04 - 实验设计与评测基准**](docs/04-实验设计与评测基准.md)：给出可直接落地的对照实验矩阵（含 Prompt Caching 拼接顺序 A/B 实验与负对照验证）。
 5. [**05 - 打分与评判机制设计**](docs/05-打分与评判机制设计.md)：定义“确定性检索评分 + 回答硬断言一票否决 + Atomic Rubric 盲评裁判 + 归因四象限”的完整评判标准，解决 LLM-as-a-Judge 漂移与阶段混淆问题。
 6. [**06 - Phase 2 Go 离线评测 Runner 架构设计**](docs/06-Go离线评测Runner架构设计.md)：定义纯 Go 离线评测器的包结构、`ContextStrategy` 接口、逐轮 LCP 缓存仿真、双模式抽取防泄露及性能优化设计。
+7. [**07 - 实验结果与准出评审报告**](docs/07-实验结果与准出评审报告.md)：汇总 23 个基准用例在离线与 DeepSeek-Chat 端到端下的完整实测结果、McNemar/Bootstrap 检验与 `E4-A` 准出建议。
 
 ---
 
