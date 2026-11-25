@@ -107,12 +107,3 @@ go run ./cmd/e2e --provider mock --strategies B0,B1,B2,E4-A,E4-B
 5. [**05 - 打分与评判机制设计**](docs/05-打分与评判机制设计.md)：定义“确定性检索评分 + 回答硬断言一票否决 + Atomic Rubric 盲评裁判 + 归因四象限”的完整评判标准，解决 LLM-as-a-Judge 漂移与阶段混淆问题。
 6. [**06 - Phase 2 Go 离线评测 Runner 架构设计**](docs/06-Go离线评测Runner架构设计.md)：定义纯 Go 离线评测器的包结构、`ContextStrategy` 接口、逐轮 LCP 缓存仿真、双模式抽取防泄露及性能优化设计。
 7. [**07 - 实验结果与准出评审报告**](docs/07-实验结果与准出评审报告.md)：汇总 23 个基准用例在离线与 DeepSeek-Chat 端到端下的完整实测结果、McNemar/Bootstrap 检验与 `E4-A` 准出建议。
-
----
-
-## 落地节奏
-
-- **Step 1（已完成）**：锁定数学模型、测试集 Schema 与评测指标文档（`docs/01`–`05`）。
-- **Step 2（已完成）**：构建 23 个高信噪比基准用例（Suite A/B/C/D）与 `case.schema.json`。
-- **Step 3（已完成）**：实现纯 Go 离线评测 Runner（`cmd/eval`）与端到端 LLM 盲评流水线（`cmd/e2e`），完成全部消融实验与准出评审（`docs/07`）。
-- **Step 4（下一阶段）**：将已通过全部准出门槛的 **`E4-A` 核心组件**（`ContextLedger` + `PPR` + `ACT-R` + `Budgeted MMR` + `Epoch=16` 冻结掩码）迁移合入 [`gp`](https://github.com/npc1607/gp) 的 `internal/core/compaction` 与 `internal/agent`。
