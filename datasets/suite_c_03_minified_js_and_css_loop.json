@@ -1,0 +1,286 @@
+{
+  "case_id": "suite_c_03_minified_js_and_css_loop",
+  "suite": "suite_c_noise",
+  "title": "混淆 JS 压缩块与 CSS 样式微调复读掩埋路由前缀约束",
+  "description": "混淆 JS 代码块（高熵噪音）+ 连续 CSS padding 调整复读（MMR 去冗余压力测试），验证路由 basename 约束不被挤出工作集。",
+  "system_prompt": "You are gp, a high-performance Go coding and ops agent.",
+  "token_budget": 800,
+  "turns": [
+    {
+      "turn_id": 1,
+      "entry_id": "entry_001",
+      "role": "user",
+      "content": "排查微前端子应用刷新 404 和构建体积问题。"
+    },
+    {
+      "turn_id": 2,
+      "entry_id": "entry_002",
+      "role": "assistant",
+      "content": "好的，请同步下挂载路径约束，再看打包产物日志。"
+    },
+    {
+      "turn_id": 3,
+      "entry_id": "entry_003",
+      "role": "user",
+      "content": "主应用统一把财务子应用挂载在 `/console/v2/finance` 前缀下，子应用路由 `basename` 绝对不能写死成根路径 `/`。",
+      "mentioned_entities": [
+        "microfrontend_basename",
+        "/console/v2/finance"
+      ],
+      "constraint_event": {
+        "action": "add",
+        "constraint_id": "cst_fe_base",
+        "statement": "子应用 basename 必须适配主应用前缀 /console/v2/finance，禁止写死 /"
+      }
+    },
+    {
+      "turn_id": 4,
+      "entry_id": "entry_004",
+      "role": "assistant",
+      "content": "明白，子应用路由前缀必须对齐 `/console/v2/finance`。"
+    },
+    {
+      "turn_id": 5,
+      "entry_id": "entry_005",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c3_js_0",
+          "name": "bash",
+          "arguments": "{\"command\": \"head -c 2400 dist/chunk-0.js\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 6,
+      "entry_id": "entry_006",
+      "role": "tool",
+      "tool_call_id": "call_c3_js_0",
+      "content": "/*! chunk-cfcd2084.js */function _0xaa1ffc(a,b){return(a^0x89)+0xebb08b};function _0x2725fd(a,b){return(a^0x112)+0x8584fd};function _0x249779(a,b){return(a^0x19b)+0xd1735b};function _0x1a6e9a(a,b){return(a^0x224)+0xaeca4b};function _0x9e6f13(a,b){return(a^0x2ad)+0x316fdc};function _0x67a5c5(a,b){return(a^0x336)+0x48d2b5};function _0x602ced(a,b){return(a^0x3bf)+0x41ded9};function _0x301be5(a,b){return(a^0x448)+0x4da13d};function _0x728f6f(a,b){return(a^0x4d1)+0xca6d4f};function _0x3d34dd(a,b){return(a^0x55a)+0xc431e0};function _0x0b7995(a,b){return(a^0x5e3)+0x98e2c5};function _0x22f6c6(a,b){return(a^0x66c)+0x4de3ce};function _0x0ee84b(a,b){return(a^0x6f5)+0x898942};function _0xe1e217(a,b){return(a^0x77e)+0x55bed0};function _0xfaa17d(a,b){return(a^0x807)+0x57f812};function _0x7ae7b6(a,b){return(a^0x890)+0x53558f};function _0x7c3c63(a,b){return(a^0x919)+0xebe5b9};function _0xde991b(a,b){return(a^0x9a2)+0x4eace0};function _0xea7242(a,b){return(a^0xa2b)+0x7a207a};function _0xe434ad(a,b){return(a^0xab4)+0x1933db};function _0xb2ce85(a,b){return(a^0xb3d)+0x47d71e};function _0x4f86fe(a,b){return(a^0xbc6)+0x8fa376};function _0x1e5b30(a,b){return(a^0xc4f)+0x110549};function _0xc9343e(a,b){return(a^0xcd8)+0xadd9be};function _0xbe201d(a,b){return(a^0xd61)+0xf97f0e};function _0x2ca96a(a,b){return(a^0xdea)+0x4ea26d};function _0xfebe11(a,b){return(a^0xe73)+0x9310dd};function _0x47b604(a,b){return(a^0xefc)+0x9b0c92};function _0x8e2fb6(a,b){return(a^0xf85)+0x9f8a99};function _0xa01477(a,b){return(a^0x100e)+0xc380a5};function _0xc06293(a,b){return(a^0x1097)+0x5d0946};function _0xdac247(a,b){return(a^0x1120)+0xc0c05e};function _0x5d22dc(a,b){return(a^0x11a9)+0x098220};function _0x7900aa(a,b){return(a^0x1232)+0xefc864};function _0xf1b0b1(a,b){return(a^0x12bb)+0x8fe699};function _0xd65c81(a,b){return(a^0x1344)+0xf5d453}"
+    },
+    {
+      "turn_id": 7,
+      "entry_id": "entry_007",
+      "role": "assistant",
+      "content": "已检查 `chunk-0.js` 压缩产物。"
+    },
+    {
+      "turn_id": 8,
+      "entry_id": "entry_008",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c3_js_1",
+          "name": "bash",
+          "arguments": "{\"command\": \"head -c 2400 dist/chunk-1.js\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 9,
+      "entry_id": "entry_009",
+      "role": "tool",
+      "tool_call_id": "call_c3_js_1",
+      "content": "/*! chunk-c4ca4238.js */function _0x294634(a,b){return(a^0x89)+0x2b1991};function _0x3e7747(a,b){return(a^0x112)+0x3eb95c};function _0xf9adee(a,b){return(a^0x19b)+0xff35ef};function _0xa28b1e(a,b){return(a^0x224)+0x722e16};function _0x2ce70a(a,b){return(a^0x2ad)+0x65560b};function _0xae2063(a,b){return(a^0x336)+0xea7dc7};function _0xcc471c(a,b){return(a^0x3bf)+0xb8ecc9};function _0x3497f7(a,b){return(a^0x448)+0x5bda1c};function _0xb3f034(a,b){return(a^0x4d1)+0x053bc8};function _0xdd74bc(a,b){return(a^0x55a)+0x8569fd};function _0xd20c66(a,b){return(a^0x5e3)+0xc6cf9b};function _0x70c1e1(a,b){return(a^0x66c)+0x61b639};function _0x03a662(a,b){return(a^0x6f5)+0x681c78};function _0xcf5bcc(a,b){return(a^0x77e)+0xe80d98};function _0x5e9c4e(a,b){return(a^0x807)+0x434f62};function _0x0eac98(a,b){return(a^0x890)+0xb143a5};function _0xf30ab5(a,b){return(a^0x919)+0x7ec2fd};function _0xda6770(a,b){return(a^0x9a2)+0x0885a2};function _0x9cbc1f(a,b){return(a^0xa2b)+0xedbb6c};function _0x764e9d(a,b){return(a^0xab4)+0x6fc1cd};function _0xdf3e99(a,b){return(a^0xb3d)+0xfc5d0f};function _0x5e501e(a,b){return(a^0xbc6)+0xa204a2};function _0x94cd9c(a,b){return(a^0xc4f)+0x3b3627};function _0x9de7f9(a,b){return(a^0xcd8)+0x8f33df};function _0xc151c9(a,b){return(a^0xd61)+0x120055};function _0xee40ab(a,b){return(a^0xdea)+0xec9a1e};function _0x7905f6(a,b){return(a^0xe73)+0x7b00db};function _0x8b0de2(a,b){return(a^0xefc)+0xfcb69a};function _0x2db867(a,b){return(a^0xf85)+0x89f50f};function _0xf757b2(a,b){return(a^0x100e)+0xfa6e95};function _0x3db68a(a,b){return(a^0x1097)+0xd9d50a};function _0xf0632d(a,b){return(a^0x1120)+0xf0a0cc};function _0xe4cb74(a,b){return(a^0x11a9)+0xa79af8};function _0x6e76d6(a,b){return(a^0x1232)+0x65f8cf};function _0xc078ab(a,b){return(a^0x12bb)+0xfe1e90};function _0x70dede(a,b){return(a^0x1344)+0x109fdd}"
+    },
+    {
+      "turn_id": 10,
+      "entry_id": "entry_010",
+      "role": "assistant",
+      "content": "已检查 `chunk-1.js` 压缩产物。"
+    },
+    {
+      "turn_id": 11,
+      "entry_id": "entry_011",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c3_js_2",
+          "name": "bash",
+          "arguments": "{\"command\": \"head -c 2400 dist/chunk-2.js\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 12,
+      "entry_id": "entry_012",
+      "role": "tool",
+      "tool_call_id": "call_c3_js_2",
+      "content": "/*! chunk-c81e728d.js */function _0x797fce(a,b){return(a^0x89)+0x029c4f};function _0xed5cce(a,b){return(a^0x112)+0xc8842b};function _0x7a27a0(a,b){return(a^0x19b)+0xd037c8};function _0xcfd3fe(a,b){return(a^0x224)+0x45ba3a};function _0x75dd42(a,b){return(a^0x2ad)+0x797f67};function _0xe47773(a,b){return(a^0x336)+0x0ed9f1};function _0xdd4275(a,b){return(a^0x3bf)+0x771569};function _0xda9f0d(a,b){return(a^0x448)+0x192258};function _0x85541a(a,b){return(a^0x4d1)+0x7d458a};function _0x643b0b(a,b){return(a^0x55a)+0xb808cd};function _0xdd4356(a,b){return(a^0x5e3)+0xb3bc22};function _0xabee93(a,b){return(a^0x66c)+0x661565};function _0xda1098(a,b){return(a^0x6f5)+0xb87166};function _0x9be4ad(a,b){return(a^0x77e)+0x832af0};function _0x7ecaac(a,b){return(a^0x807)+0xbe8d73};function _0x38f143(a,b){return(a^0x890)+0xdbec62};function _0x2d964d(a,b){return(a^0x919)+0x4f145d};function _0x61b5d9(a,b){return(a^0x9a2)+0x2e9579};function _0x24c03e(a,b){return(a^0xa2b)+0xfa542d};function _0xac9ab9(a,b){return(a^0xab4)+0x840cdd};function _0x14793c(a,b){return(a^0xb3d)+0x900dba};function _0x472511(a,b){return(a^0xbc6)+0x2a6cde};function _0x3b9fbf(a,b){return(a^0xc4f)+0x618eec};function _0x2ef310(a,b){return(a^0xcd8)+0x52c314};function _0xf0816a(a,b){return(a^0xd61)+0xab992f};function _0xbf9016(a,b){return(a^0xdea)+0x573759};function _0x2ee187(a,b){return(a^0xe73)+0xd9f12b};function _0x3fc505(a,b){return(a^0xefc)+0x45a12c};function _0x9ed926(a,b){return(a^0xf85)+0x566ea9};function _0xfeb2bd(a,b){return(a^0x100e)+0xee23c4};function _0x60431b(a,b){return(a^0x1097)+0x93fac7};function _0x84b320(a,b){return(a^0x1120)+0xbb00b9};function _0xdeafb3(a,b){return(a^0x11a9)+0x77c642};function _0xe6eb8a(a,b){return(a^0x1232)+0xb017b5};function _0x5c734a(a,b){return(a^0x12bb)+0x2df260};function _0x1657d6(a,b){return(a^0x1344)+0x1fae7a}"
+    },
+    {
+      "turn_id": 13,
+      "entry_id": "entry_013",
+      "role": "assistant",
+      "content": "已检查 `chunk-2.js` 压缩产物。"
+    },
+    {
+      "turn_id": 14,
+      "entry_id": "entry_014",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c3_js_3",
+          "name": "bash",
+          "arguments": "{\"command\": \"head -c 2400 dist/chunk-3.js\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 15,
+      "entry_id": "entry_015",
+      "role": "tool",
+      "tool_call_id": "call_c3_js_3",
+      "content": "/*! chunk-eccbc87e.js */function _0xd37484(a,b){return(a^0x89)+0xb24ef3};function _0xc8a85f(a,b){return(a^0x112)+0x808753};function _0x3996b6(a,b){return(a^0x19b)+0xacfac4};function _0x110f74(a,b){return(a^0x224)+0x558167};function _0xa6a849(a,b){return(a^0x2ad)+0x9d9781};function _0x59a224(a,b){return(a^0x336)+0x65c25c};function _0x067eb6(a,b){return(a^0x3bf)+0xcf6bfd};function _0x56e6f4(a,b){return(a^0x448)+0x9b200a};function _0x0df20f(a,b){return(a^0x4d1)+0xb53590};function _0x6670e2(a,b){return(a^0x55a)+0x8acd24};function _0x6dbf42(a,b){return(a^0x5e3)+0x880579};function _0x5d1aaf(a,b){return(a^0x66c)+0x57788e};function _0x286d97(a,b){return(a^0x6f5)+0x5475e1};function _0x291d5b(a,b){return(a^0x77e)+0xb51a36};function _0xb0135d(a,b){return(a^0x807)+0x1b5967};function _0x1c69b3(a,b){return(a^0x890)+0x044306};function _0x0f0534(a,b){return(a^0x919)+0xd2d81b};function _0x9057d8(a,b){return(a^0x9a2)+0x5518a5};function _0x7d6492(a,b){return(a^0xa2b)+0xa1c886};function _0x78ad56(a,b){return(a^0xab4)+0xcd0a13};function _0xee9ca1(a,b){return(a^0xb3d)+0x7bb65c};function _0x0ec75f(a,b){return(a^0xbc6)+0xc71767};function _0x0eb900(a,b){return(a^0xc4f)+0x2df544};function _0xd94fad(a,b){return(a^0xcd8)+0x40f1e4};function _0x9342bd(a,b){return(a^0xd61)+0x30b092};function _0xaf14b3(a,b){return(a^0xdea)+0x6eae49};function _0x7b8c9c(a,b){return(a^0xe73)+0x24f259};function _0x9f97f5(a,b){return(a^0xefc)+0xb572da};function _0x7a7c2a(a,b){return(a^0xf85)+0xf281ba};function _0x6b891e(a,b){return(a^0x100e)+0xa20f71};function _0xd86bf2(a,b){return(a^0x1097)+0x37a405};function _0x93443f(a,b){return(a^0x1120)+0xc8597c};function _0x3ce085(a,b){return(a^0x11a9)+0xa08ee1};function _0x168402(a,b){return(a^0x1232)+0x176e2a};function _0x580afe(a,b){return(a^0x12bb)+0x99ce3c};function _0xdbe38e(a,b){return(a^0x1344)+0xce649f}"
+    },
+    {
+      "turn_id": 16,
+      "entry_id": "entry_016",
+      "role": "assistant",
+      "content": "已检查 `chunk-3.js` 压缩产物。"
+    },
+    {
+      "turn_id": 17,
+      "entry_id": "entry_017",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c3_js_4",
+          "name": "bash",
+          "arguments": "{\"command\": \"head -c 2400 dist/chunk-4.js\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 18,
+      "entry_id": "entry_018",
+      "role": "tool",
+      "tool_call_id": "call_c3_js_4",
+      "content": "/*! chunk-a87ff679.js */function _0xf1df67(a,b){return(a^0x89)+0x7f3f3f};function _0x6c1a73(a,b){return(a^0x112)+0x63dcad};function _0xce9864(a,b){return(a^0x19b)+0xa1f510};function _0xb93d22(a,b){return(a^0x224)+0xa8867a};function _0x035b5c(a,b){return(a^0x2ad)+0xe01f74};function _0xb83f7a(a,b){return(a^0x336)+0x17a211};function _0x6e1737(a,b){return(a^0x3bf)+0x015978};function _0xf0f286(a,b){return(a^0x448)+0xc58da9};function _0x86fb66(a,b){return(a^0x4d1)+0x0a81b3};function _0xa8f53c(a,b){return(a^0x55a)+0xa01bcb};function _0xbf5c1f(a,b){return(a^0x5e3)+0xb2c7b1};function _0x5a111d(a,b){return(a^0x66c)+0xc0cf18};function _0x327479(a,b){return(a^0x6f5)+0xe020b2};function _0x7be1d7(a,b){return(a^0x77e)+0x07c036};function _0xabbfee(a,b){return(a^0x807)+0x95a036};function _0x2360da(a,b){return(a^0x890)+0x216434};function _0x1a4936(a,b){return(a^0x919)+0xddc6c9};function _0xc63fdd(a,b){return(a^0x9a2)+0x1b92b8};function _0x30cfef(a,b){return(a^0xa2b)+0x840b23};function _0x579809(a,b){return(a^0xab4)+0xa12db9};function _0x3e8299(a,b){return(a^0xb3d)+0xa0c657};function _0x67bf8c(a,b){return(a^0xbc6)+0x5c24d0};function _0x595ff9(a,b){return(a^0xc4f)+0xf90fb1};function _0x45ea7b(a,b){return(a^0xcd8)+0x6ae4a4};function _0xf399e9(a,b){return(a^0xd61)+0xa0aceb};function _0xef35b1(a,b){return(a^0xdea)+0xbc7f62};function _0xc990d1(a,b){return(a^0xe73)+0x08e99c};function _0x9bd192(a,b){return(a^0xefc)+0x30df8f};function _0x75be14(a,b){return(a^0xf85)+0x983c62};function _0xcda6a3(a,b){return(a^0x100e)+0x6f74b2};function _0x0106f4(a,b){return(a^0x1097)+0x5ff2d1};function _0x389d88(a,b){return(a^0x1120)+0xc580a9};function _0x6b0d04(a,b){return(a^0x11a9)+0x28e0c3};function _0x4f4c3b(a,b){return(a^0x1232)+0xad89b5};function _0x6196c8(a,b){return(a^0x12bb)+0x585f96};function _0x5d3e45(a,b){return(a^0x1344)+0x8565f4}"
+    },
+    {
+      "turn_id": 19,
+      "entry_id": "entry_019",
+      "role": "assistant",
+      "content": "已检查 `chunk-4.js` 压缩产物。"
+    },
+    {
+      "turn_id": 20,
+      "entry_id": "entry_020",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c3_js_5",
+          "name": "bash",
+          "arguments": "{\"command\": \"head -c 2400 dist/chunk-5.js\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 21,
+      "entry_id": "entry_021",
+      "role": "tool",
+      "tool_call_id": "call_c3_js_5",
+      "content": "/*! chunk-e4da3b7f.js */function _0x1f07e4(a,b){return(a^0x89)+0xa202d5};function _0xb1740e(a,b){return(a^0x112)+0xe905be};function _0xc49113(a,b){return(a^0x19b)+0x505fb0};function _0x6ad34d(a,b){return(a^0x224)+0x51c01e};function _0x48b21d(a,b){return(a^0x2ad)+0x749d63};function _0x6d761a(a,b){return(a^0x336)+0xb5aedf};function _0x1fe054(a,b){return(a^0x3bf)+0x3dfd0b};function _0x0c9ee6(a,b){return(a^0x448)+0x62925b};function _0xf5cef1(a,b){return(a^0x4d1)+0xb7c2d6};function _0x30f251(a,b){return(a^0x55a)+0xcc927a};function _0xba91b7(a,b){return(a^0x5e3)+0x4a3091};function _0xc1109b(a,b){return(a^0x66c)+0xd1c590};function _0x9d6057(a,b){return(a^0x6f5)+0x2cee0e};function _0x271794(a,b){return(a^0x77e)+0x8c64ef};function _0xbd8475(a,b){return(a^0x807)+0x195151};function _0x72b144(a,b){return(a^0x890)+0x8277f4};function _0x9b9999(a,b){return(a^0x919)+0x26dde7};function _0xe23aa8(a,b){return(a^0x9a2)+0xd92358};function _0x3f66a5(a,b){return(a^0xa2b)+0x2817ec};function _0x085da9(a,b){return(a^0xab4)+0x55e93f};function _0x1a4a3c(a,b){return(a^0xb3d)+0x18f1f3};function _0x9ca69c(a,b){return(a^0xbc6)+0xf12801};function _0xf2c485(a,b){return(a^0xc4f)+0x3d275f};function _0x6c14f8(a,b){return(a^0xcd8)+0x1b7f92};function _0xc30718(a,b){return(a^0xd61)+0x9cc27b};function _0x31feb9(a,b){return(a^0xdea)+0xb4cabd};function _0xdf6bc5(a,b){return(a^0xe73)+0x75194c};function _0x02e7d7(a,b){return(a^0xefc)+0x9f9f43};function _0xdb5d4d(a,b){return(a^0xf85)+0x3295ac};function _0x193011(a,b){return(a^0x100e)+0xd5c3ba};function _0x790760(a,b){return(a^0x1097)+0xc598fb};function _0x7db4df(a,b){return(a^0x1120)+0x8bd977};function _0xcca0c6(a,b){return(a^0x11a9)+0x052cb3};function _0xbdddf2(a,b){return(a^0x1232)+0x6a3acb};function _0x1d422b(a,b){return(a^0x12bb)+0x122340};function _0xa78976(a,b){return(a^0x1344)+0xe0362e}"
+    },
+    {
+      "turn_id": 22,
+      "entry_id": "entry_022",
+      "role": "assistant",
+      "content": "已检查 `chunk-5.js` 压缩产物。"
+    },
+    {
+      "turn_id": 23,
+      "entry_id": "entry_023",
+      "role": "user",
+      "content": "按钮内边距再微调一下，第 1 次尝试改成 10px 看看对齐。"
+    },
+    {
+      "turn_id": 24,
+      "entry_id": "entry_024",
+      "role": "assistant",
+      "content": "已将按钮 padding 更新为 10px。"
+    },
+    {
+      "turn_id": 25,
+      "entry_id": "entry_025",
+      "role": "user",
+      "content": "按钮内边距再微调一下，第 2 次尝试改成 12px 看看对齐。"
+    },
+    {
+      "turn_id": 26,
+      "entry_id": "entry_026",
+      "role": "assistant",
+      "content": "已将按钮 padding 更新为 12px。"
+    },
+    {
+      "turn_id": 27,
+      "entry_id": "entry_027",
+      "role": "user",
+      "content": "按钮内边距再微调一下，第 3 次尝试改成 14px 看看对齐。"
+    },
+    {
+      "turn_id": 28,
+      "entry_id": "entry_028",
+      "role": "assistant",
+      "content": "已将按钮 padding 更新为 14px。"
+    },
+    {
+      "turn_id": 29,
+      "entry_id": "entry_029",
+      "role": "user",
+      "content": "按钮内边距再微调一下，第 4 次尝试改成 16px 看看对齐。"
+    },
+    {
+      "turn_id": 30,
+      "entry_id": "entry_030",
+      "role": "assistant",
+      "content": "已将按钮 padding 更新为 16px。"
+    },
+    {
+      "turn_id": 31,
+      "entry_id": "entry_031",
+      "role": "user",
+      "content": "按钮内边距再微调一下，第 5 次尝试改成 18px 看看对齐。"
+    },
+    {
+      "turn_id": 32,
+      "entry_id": "entry_032",
+      "role": "assistant",
+      "content": "已将按钮 padding 更新为 18px。"
+    },
+    {
+      "turn_id": 33,
+      "entry_id": "entry_033",
+      "role": "user",
+      "content": "按钮内边距再微调一下，第 6 次尝试改成 20px 看看对齐。"
+    },
+    {
+      "turn_id": 34,
+      "entry_id": "entry_034",
+      "role": "assistant",
+      "content": "已将按钮 padding 更新为 20px。"
+    }
+  ],
+  "eval_probes": [
+    {
+      "probe_id": "probe_c3",
+      "at_turn": 34,
+      "query": "为了省事我刚把子应用 `createBrowserRouter` 的 `basename` 设成 `'/'`，准备直接发版，有没有隐患？",
+      "required_evidence_entry_ids": [
+        "entry_003"
+      ],
+      "forbidden_superseded_entry_ids": [],
+      "expected_rubric": [
+        "指出不可设成 '/'",
+        "明确子应用挂载在主应用 /console/v2/finance 下，basename 需对齐该前缀"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,290 @@
+{
+  "case_id": "suite_c_05_sql_explain_and_lint_loop",
+  "suite": "suite_c_noise",
+  "title": "SQL EXPLAIN 随机数值风暴与 Lint 复读掩埋复合索引结构",
+  "description": "在 turn 4 获取 B-Tree 复合索引三列顺序后，灌入大量随机 cost/rows/buffers 的 EXPLAIN 输出与重复 lint 修改，末轮问跨列查询为何全表扫描。",
+  "system_prompt": "You are gp, a high-performance Go coding and ops agent.",
+  "token_budget": 800,
+  "turns": [
+    {
+      "turn_id": 1,
+      "entry_id": "entry_001",
+      "role": "user",
+      "content": "订单检索接口突然慢查询告警，我们先核对表上的复合索引定义。"
+    },
+    {
+      "turn_id": 2,
+      "entry_id": "entry_002",
+      "role": "assistant",
+      "content": "好的，请先查看表索引，再分析执行计划。"
+    },
+    {
+      "turn_id": 3,
+      "entry_id": "entry_003",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c5_idx",
+          "name": "bash",
+          "arguments": "{\"command\": \"psql -c '\\\\d+ orders'\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 4,
+      "entry_id": "entry_004",
+      "role": "tool",
+      "tool_call_id": "call_c5_idx",
+      "content": "Indexes:\n  \"idx_tenant_status_ctime\" btree (tenant_id, status, created_at)\n  -- 约定：必须遵循 B-Tree 最左前缀，跳过中间列 status 只查 tenant_id + created_at 无法命中该复合索引范围扫描",
+      "mentioned_entities": [
+        "idx_tenant_status_ctime",
+        "orders_table"
+      ]
+    },
+    {
+      "turn_id": 5,
+      "entry_id": "entry_005",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c5_exp_0",
+          "name": "bash",
+          "arguments": "{\"command\": \"psql -f queries/sample_0.sql\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 6,
+      "entry_id": "entry_006",
+      "role": "tool",
+      "tool_call_id": "call_c5_exp_0",
+      "content": "Hash Join  (cost=1420.12..89214.55 rows=45120 width=128) (actual time=12.400..482.900 rows=44810 loops=1)\n  Hash Cond: (o.id = d.order_id_0) | Buffers: shared hit=9120 read=410\n  -> Seq Scan on orders_0_0 (cost=0.00..44129.10 rows=812040 width=64) | Filter: (tenant_id = 't_3eac1f3c2ef5')\nHash Join  (cost=1422.22..89221.85 rows=45121 width=128) (actual time=12.400..482.900 rows=44810 loops=1)\n  Hash Cond: (o.id = d.order_id_1) | Buffers: shared hit=9137 read=411\n  -> Seq Scan on orders_0_1 (cost=0.00..44129.10 rows=812040 width=64) | Filter: (tenant_id = 't_81c996800339')\nHash Join  (cost=1424.32..89229.15 rows=45122 width=128) (actual time=12.400..482.900 rows=44810 loops=1)\n  Hash Cond: (o.id = d.order_id_2) | Buffers: shared hit=9154 read=412\n  -> Seq Scan on orders_0_2 (cost=0.00..44129.10 rows=812040 width=64) | Filter: (tenant_id = 't_d04d9344aafc')\nHash Join  (cost=1426.42..89236.45 rows=45123 width=128) (actual time=12.400..482.900 rows=44810 loops=1)\n  Hash Cond: (o.id = d.order_id_3) | Buffers: shared hit=9171 read=413\n  -> Seq Scan on orders_0_3 (cost=0.00..44129.10 rows=812040 width=64) | Filter: (tenant_id = 't_ac282a7be043')\nHash Join  (cost=1428.52..89243.75 rows=45124 width=128) (actual time=12.400..482.900 rows=44810 loops=1)\n  Hash Cond: (o.id = d.order_id_4) | Buffers: shared hit=9188 read=414\n  -> Seq Scan on orders_0_4 (cost=0.00..44129.10 rows=812040 width=64) | Filter: (tenant_id = 't_e557c6535aa3')\nHash Join  (cost=1430.62..89251.05 rows=45125 width=128) (actual time=12.400..482.900 rows=44810 loops=1)\n  Hash Cond: (o.id = d.order_id_5) | Buffers: shared hit=9205 read=415\n  -> Seq Scan on orders_0_5 (cost=0.00..44129.10 rows=812040 width=64) | Filter: (tenant_id = 't_9a1182b1197c')"
+    },
+    {
+      "turn_id": 7,
+      "entry_id": "entry_007",
+      "role": "assistant",
+      "content": "已归档样本查询 `sample_0.sql` 的缓冲命中统计。"
+    },
+    {
+      "turn_id": 8,
+      "entry_id": "entry_008",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c5_exp_1",
+          "name": "bash",
+          "arguments": "{\"command\": \"psql -f queries/sample_1.sql\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 9,
+      "entry_id": "entry_009",
+      "role": "tool",
+      "tool_call_id": "call_c5_exp_1",
+      "content": "Hash Join  (cost=1433.82..89255.75 rows=45211 width=128) (actual time=13.400..489.900 rows=44811 loops=1)\n  Hash Cond: (o.id = d.order_id_0) | Buffers: shared hit=9153 read=415\n  -> Seq Scan on orders_1_0 (cost=0.00..44129.10 rows=812040 width=64) | Filter: (tenant_id = 't_81b206a89f89')\nHash Join  (cost=1435.92..89263.05 rows=45212 width=128) (actual time=13.400..489.900 rows=44811 loops=1)\n  Hash Cond: (o.id = d.order_id_1) | Buffers: shared hit=9170 read=416\n  -> Seq Scan on orders_1_1 (cost=0.00..44129.10 rows=812040 width=64) | Filter: (tenant_id = 't_d0bd571dc19c')\nHash Join  (cost=1438.02..89270.35 rows=45213 width=128) (actual time=13.400..489.900 rows=44811 loops=1)\n  Hash Cond: (o.id = d.order_id_2) | Buffers: shared hit=9187 read=417\n  -> Seq Scan on orders_1_2 (cost=0.00..44129.10 rows=812040 width=64) | Filter: (tenant_id = 't_def474a313bf')\nHash Join  (cost=1440.12..89277.65 rows=45214 width=128) (actual time=13.400..489.900 rows=44811 loops=1)\n  Hash Cond: (o.id = d.order_id_3) | Buffers: shared hit=9204 read=418\n  -> Seq Scan on orders_1_3 (cost=0.00..44129.10 rows=812040 width=64) | Filter: (tenant_id = 't_5f649e24afcd')\nHash Join  (cost=1442.22..89284.95 rows=45215 width=128) (actual time=13.400..489.900 rows=44811 loops=1)\n  Hash Cond: (o.id = d.order_id_4) | Buffers: shared hit=9221 read=419\n  -> Seq Scan on orders_1_4 (cost=0.00..44129.10 rows=812040 width=64) | Filter: (tenant_id = 't_f4201c652243')\nHash Join  (cost=1444.32..89292.25 rows=45216 width=128) (actual time=13.400..489.900 rows=44811 loops=1)\n  Hash Cond: (o.id = d.order_id_5) | Buffers: shared hit=9238 read=420\n  -> Seq Scan on orders_1_5 (cost=0.00..44129.10 rows=812040 width=64) | Filter: (tenant_id = 't_d82eea4f7eef')"
+    },
+    {
+      "turn_id": 10,
+      "entry_id": "entry_010",
+      "role": "assistant",
+      "content": "已归档样本查询 `sample_1.sql` 的缓冲命中统计。"
+    },
+    {
+      "turn_id": 11,
+      "entry_id": "entry_011",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c5_exp_2",
+          "name": "bash",
+          "arguments": "{\"command\": \"psql -f queries/sample_2.sql\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 12,
+      "entry_id": "entry_012",
+      "role": "tool",
+      "tool_call_id": "call_c5_exp_2",
+      "content": "Hash Join  (cost=1447.52..89296.95 rows=45302 width=128) (actual time=14.400..496.900 rows=44812 loops=1)\n  Hash Cond: (o.id = d.order_id_0) | Buffers: shared hit=9186 read=420\n  -> Seq Scan on orders_2_0 (cost=0.00..44129.10 rows=812040 width=64) | Filter: (tenant_id = 't_fec2e7384c5c')\nHash Join  (cost=1449.62..89304.25 rows=45303 width=128) (actual time=14.400..496.900 rows=44812 loops=1)\n  Hash Cond: (o.id = d.order_id_1) | Buffers: shared hit=9203 read=421\n  -> Seq Scan on orders_2_1 (cost=0.00..44129.10 rows=812040 width=64) | Filter: (tenant_id = 't_6af2d30e671e')\nHash Join  (cost=1451.72..89311.55 rows=45304 width=128) (actual time=14.400..496.900 rows=44812 loops=1)\n  Hash Cond: (o.id = d.order_id_2) | Buffers: shared hit=9220 read=422\n  -> Seq Scan on orders_2_2 (cost=0.00..44129.10 rows=812040 width=64) | Filter: (tenant_id = 't_5b536866e244')\nHash Join  (cost=1453.82..89318.85 rows=45305 width=128) (actual time=14.400..496.900 rows=44812 loops=1)\n  Hash Cond: (o.id = d.order_id_3) | Buffers: shared hit=9237 read=423\n  -> Seq Scan on orders_2_3 (cost=0.00..44129.10 rows=812040 width=64) | Filter: (tenant_id = 't_02eaa2934adc')\nHash Join  (cost=1455.92..89326.15 rows=45306 width=128) (actual time=14.400..496.900 rows=44812 loops=1)\n  Hash Cond: (o.id = d.order_id_4) | Buffers: shared hit=9254 read=424\n  -> Seq Scan on orders_2_4 (cost=0.00..44129.10 rows=812040 width=64) | Filter: (tenant_id = 't_c604f559ec9c')\nHash Join  (cost=1458.02..89333.45 rows=45307 width=128) (actual time=14.400..496.900 rows=44812 loops=1)\n  Hash Cond: (o.id = d.order_id_5) | Buffers: shared hit=9271 read=425\n  -> Seq Scan on orders_2_5 (cost=0.00..44129.10 rows=812040 width=64) | Filter: (tenant_id = 't_24477a77686c')"
+    },
+    {
+      "turn_id": 13,
+      "entry_id": "entry_013",
+      "role": "assistant",
+      "content": "已归档样本查询 `sample_2.sql` 的缓冲命中统计。"
+    },
+    {
+      "turn_id": 14,
+      "entry_id": "entry_014",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c5_exp_3",
+          "name": "bash",
+          "arguments": "{\"command\": \"psql -f queries/sample_3.sql\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 15,
+      "entry_id": "entry_015",
+      "role": "tool",
+      "tool_call_id": "call_c5_exp_3",
+      "content": "Hash Join  (cost=1461.22..89338.15 rows=45393 width=128) (actual time=15.400..503.900 rows=44813 loops=1)\n  Hash Cond: (o.id = d.order_id_0) | Buffers: shared hit=9219 read=425\n  -> Seq Scan on orders_3_0 (cost=0.00..44129.10 rows=812040 width=64) | Filter: (tenant_id = 't_974231883646')\nHash Join  (cost=1463.32..89345.45 rows=45394 width=128) (actual time=15.400..503.900 rows=44813 loops=1)\n  Hash Cond: (o.id = d.order_id_1) | Buffers: shared hit=9236 read=426\n  -> Seq Scan on orders_3_1 (cost=0.00..44129.10 rows=812040 width=64) | Filter: (tenant_id = 't_1eea22a4b901')\nHash Join  (cost=1465.42..89352.75 rows=45395 width=128) (actual time=15.400..503.900 rows=44813 loops=1)\n  Hash Cond: (o.id = d.order_id_2) | Buffers: shared hit=9253 read=427\n  -> Seq Scan on orders_3_2 (cost=0.00..44129.10 rows=812040 width=64) | Filter: (tenant_id = 't_617abeba7b98')\nHash Join  (cost=1467.52..89360.05 rows=45396 width=128) (actual time=15.400..503.900 rows=44813 loops=1)\n  Hash Cond: (o.id = d.order_id_3) | Buffers: shared hit=9270 read=428\n  -> Seq Scan on orders_3_3 (cost=0.00..44129.10 rows=812040 width=64) | Filter: (tenant_id = 't_a0a13454876e')\nHash Join  (cost=1469.62..89367.35 rows=45397 width=128) (actual time=15.400..503.900 rows=44813 loops=1)\n  Hash Cond: (o.id = d.order_id_4) | Buffers: shared hit=9287 read=429\n  -> Seq Scan on orders_3_4 (cost=0.00..44129.10 rows=812040 width=64) | Filter: (tenant_id = 't_196f2739157a')\nHash Join  (cost=1471.72..89374.65 rows=45398 width=128) (actual time=15.400..503.900 rows=44813 loops=1)\n  Hash Cond: (o.id = d.order_id_5) | Buffers: shared hit=9304 read=430\n  -> Seq Scan on orders_3_5 (cost=0.00..44129.10 rows=812040 width=64) | Filter: (tenant_id = 't_0dfa50bc7dbf')"
+    },
+    {
+      "turn_id": 16,
+      "entry_id": "entry_016",
+      "role": "assistant",
+      "content": "已归档样本查询 `sample_3.sql` 的缓冲命中统计。"
+    },
+    {
+      "turn_id": 17,
+      "entry_id": "entry_017",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c5_exp_4",
+          "name": "bash",
+          "arguments": "{\"command\": \"psql -f queries/sample_4.sql\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 18,
+      "entry_id": "entry_018",
+      "role": "tool",
+      "tool_call_id": "call_c5_exp_4",
+      "content": "Hash Join  (cost=1474.92..89379.35 rows=45484 width=128) (actual time=16.400..510.900 rows=44814 loops=1)\n  Hash Cond: (o.id = d.order_id_0) | Buffers: shared hit=9252 read=430\n  -> Seq Scan on orders_4_0 (cost=0.00..44129.10 rows=812040 width=64) | Filter: (tenant_id = 't_e3cdb25958a8')\nHash Join  (cost=1477.02..89386.65 rows=45485 width=128) (actual time=16.400..510.900 rows=44814 loops=1)\n  Hash Cond: (o.id = d.order_id_1) | Buffers: shared hit=9269 read=431\n  -> Seq Scan on orders_4_1 (cost=0.00..44129.10 rows=812040 width=64) | Filter: (tenant_id = 't_f4a9b4147a8b')\nHash Join  (cost=1479.12..89393.95 rows=45486 width=128) (actual time=16.400..510.900 rows=44814 loops=1)\n  Hash Cond: (o.id = d.order_id_2) | Buffers: shared hit=9286 read=432\n  -> Seq Scan on orders_4_2 (cost=0.00..44129.10 rows=812040 width=64) | Filter: (tenant_id = 't_bc2077e2e63b')\nHash Join  (cost=1481.22..89401.25 rows=45487 width=128) (actual time=16.400..510.900 rows=44814 loops=1)\n  Hash Cond: (o.id = d.order_id_3) | Buffers: shared hit=9303 read=433\n  -> Seq Scan on orders_4_3 (cost=0.00..44129.10 rows=812040 width=64) | Filter: (tenant_id = 't_35c934de8e15')\nHash Join  (cost=1483.32..89408.55 rows=45488 width=128) (actual time=16.400..510.900 rows=44814 loops=1)\n  Hash Cond: (o.id = d.order_id_4) | Buffers: shared hit=9320 read=434\n  -> Seq Scan on orders_4_4 (cost=0.00..44129.10 rows=812040 width=64) | Filter: (tenant_id = 't_dd81dc916854')\nHash Join  (cost=1485.42..89415.85 rows=45489 width=128) (actual time=16.400..510.900 rows=44814 loops=1)\n  Hash Cond: (o.id = d.order_id_5) | Buffers: shared hit=9337 read=435\n  -> Seq Scan on orders_4_5 (cost=0.00..44129.10 rows=812040 width=64) | Filter: (tenant_id = 't_3b19e2a499d2')"
+    },
+    {
+      "turn_id": 19,
+      "entry_id": "entry_019",
+      "role": "assistant",
+      "content": "已归档样本查询 `sample_4.sql` 的缓冲命中统计。"
+    },
+    {
+      "turn_id": 20,
+      "entry_id": "entry_020",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c5_exp_5",
+          "name": "bash",
+          "arguments": "{\"command\": \"psql -f queries/sample_5.sql\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 21,
+      "entry_id": "entry_021",
+      "role": "tool",
+      "tool_call_id": "call_c5_exp_5",
+      "content": "Hash Join  (cost=1488.62..89420.55 rows=45575 width=128) (actual time=17.400..517.900 rows=44815 loops=1)\n  Hash Cond: (o.id = d.order_id_0) | Buffers: shared hit=9285 read=435\n  -> Seq Scan on orders_5_0 (cost=0.00..44129.10 rows=812040 width=64) | Filter: (tenant_id = 't_39cf0d52f8cb')\nHash Join  (cost=1490.72..89427.85 rows=45576 width=128) (actual time=17.400..517.900 rows=44815 loops=1)\n  Hash Cond: (o.id = d.order_id_1) | Buffers: shared hit=9302 read=436\n  -> Seq Scan on orders_5_1 (cost=0.00..44129.10 rows=812040 width=64) | Filter: (tenant_id = 't_fb472fce3505')\nHash Join  (cost=1492.82..89435.15 rows=45577 width=128) (actual time=17.400..517.900 rows=44815 loops=1)\n  Hash Cond: (o.id = d.order_id_2) | Buffers: shared hit=9319 read=437\n  -> Seq Scan on orders_5_2 (cost=0.00..44129.10 rows=812040 width=64) | Filter: (tenant_id = 't_dc676a140511')\nHash Join  (cost=1494.92..89442.45 rows=45578 width=128) (actual time=17.400..517.900 rows=44815 loops=1)\n  Hash Cond: (o.id = d.order_id_3) | Buffers: shared hit=9336 read=438\n  -> Seq Scan on orders_5_3 (cost=0.00..44129.10 rows=812040 width=64) | Filter: (tenant_id = 't_3fe311693ab3')\nHash Join  (cost=1497.02..89449.75 rows=45579 width=128) (actual time=17.400..517.900 rows=44815 loops=1)\n  Hash Cond: (o.id = d.order_id_4) | Buffers: shared hit=9353 read=439\n  -> Seq Scan on orders_5_4 (cost=0.00..44129.10 rows=812040 width=64) | Filter: (tenant_id = 't_5439f3cf0dd8')\nHash Join  (cost=1499.12..89457.05 rows=45580 width=128) (actual time=17.400..517.900 rows=44815 loops=1)\n  Hash Cond: (o.id = d.order_id_5) | Buffers: shared hit=9370 read=440\n  -> Seq Scan on orders_5_5 (cost=0.00..44129.10 rows=812040 width=64) | Filter: (tenant_id = 't_70604aef0626')"
+    },
+    {
+      "turn_id": 22,
+      "entry_id": "entry_022",
+      "role": "assistant",
+      "content": "已归档样本查询 `sample_5.sql` 的缓冲命中统计。"
+    },
+    {
+      "turn_id": 23,
+      "entry_id": "entry_023",
+      "role": "user",
+      "content": "golangci-lint 又报了第 1 个未使用的局部变量，先删掉继续。"
+    },
+    {
+      "turn_id": 24,
+      "entry_id": "entry_024",
+      "role": "assistant",
+      "content": "已清理第 1 处 unused var lint 告警。"
+    },
+    {
+      "turn_id": 25,
+      "entry_id": "entry_025",
+      "role": "user",
+      "content": "golangci-lint 又报了第 2 个未使用的局部变量，先删掉继续。"
+    },
+    {
+      "turn_id": 26,
+      "entry_id": "entry_026",
+      "role": "assistant",
+      "content": "已清理第 2 处 unused var lint 告警。"
+    },
+    {
+      "turn_id": 27,
+      "entry_id": "entry_027",
+      "role": "user",
+      "content": "golangci-lint 又报了第 3 个未使用的局部变量，先删掉继续。"
+    },
+    {
+      "turn_id": 28,
+      "entry_id": "entry_028",
+      "role": "assistant",
+      "content": "已清理第 3 处 unused var lint 告警。"
+    },
+    {
+      "turn_id": 29,
+      "entry_id": "entry_029",
+      "role": "user",
+      "content": "golangci-lint 又报了第 4 个未使用的局部变量，先删掉继续。"
+    },
+    {
+      "turn_id": 30,
+      "entry_id": "entry_030",
+      "role": "assistant",
+      "content": "已清理第 4 处 unused var lint 告警。"
+    },
+    {
+      "turn_id": 31,
+      "entry_id": "entry_031",
+      "role": "user",
+      "content": "golangci-lint 又报了第 5 个未使用的局部变量，先删掉继续。"
+    },
+    {
+      "turn_id": 32,
+      "entry_id": "entry_032",
+      "role": "assistant",
+      "content": "已清理第 5 处 unused var lint 告警。"
+    },
+    {
+      "turn_id": 33,
+      "entry_id": "entry_033",
+      "role": "user",
+      "content": "golangci-lint 又报了第 6 个未使用的局部变量，先删掉继续。"
+    },
+    {
+      "turn_id": 34,
+      "entry_id": "entry_034",
+      "role": "assistant",
+      "content": "已清理第 6 处 unused var lint 告警。"
+    }
+  ],
+  "eval_probes": [
+    {
+      "probe_id": "probe_c5",
+      "at_turn": 34,
+      "query": "查询语句写的是 `WHERE tenant_id = $1 AND created_at >= $2`，明明两列都在索引里为什么还走慢查询全表扫描？",
+      "required_evidence_entry_ids": [
+        "entry_004"
+      ],
+      "forbidden_superseded_entry_ids": [],
+      "expected_rubric": [
+        "准确指出表上复合索引顺序为 (tenant_id, status, created_at)",
+        "解释查询跳过了中间列 status 违反 B-Tree 最左前缀原则（导致 created_at 无法高效范围定位）",
+        "给出补充 status IN (...) 或单独新建 (tenant_id, created_at) 索引的建议"
+      ]
+    }
+  ]
+}

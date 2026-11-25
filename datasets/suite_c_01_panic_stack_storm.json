@@ -1,0 +1,286 @@
+{
+  "case_id": "suite_c_01_panic_stack_storm",
+  "suite": "suite_c_noise",
+  "title": "长 Go Panic 堆栈与拼写微调复读掩埋核心并发限制",
+  "description": "在 turn 3 给出关键的并发=2 硬限制后，注入大量高熵十六进制 panic 堆栈（诱饵）与多轮重复 typo 修正（Top-K 挤占诱饵）。",
+  "system_prompt": "You are gp, a high-performance Go coding and ops agent.",
+  "token_budget": 800,
+  "turns": [
+    {
+      "turn_id": 1,
+      "entry_id": "entry_001",
+      "role": "user",
+      "content": "先梳理下发票导出异步任务模块的配置和最近线上报错。"
+    },
+    {
+      "turn_id": 2,
+      "entry_id": "entry_002",
+      "role": "assistant",
+      "content": "好的，我先确认导出任务的硬性资源与限流边界，再排查报错日志。"
+    },
+    {
+      "turn_id": 3,
+      "entry_id": "entry_003",
+      "role": "user",
+      "content": "关键硬性限制：下游税务开票网关按单商户强制卡死每秒最多 2 次请求，我们的导出 worker 并发数绝对不能超过 2，超了会被直接拉黑 24 小时。",
+      "mentioned_entities": [
+        "invoice_export",
+        "worker_concurrency_2"
+      ],
+      "constraint_event": {
+        "action": "add",
+        "constraint_id": "cst_inv_qps",
+        "statement": "发票导出 worker 并发硬上限为 2，不可突破"
+      }
+    },
+    {
+      "turn_id": 4,
+      "entry_id": "entry_004",
+      "role": "assistant",
+      "content": "收到，worker 并发上限锁定为 2。"
+    },
+    {
+      "turn_id": 5,
+      "entry_id": "entry_005",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c1_panic_0",
+          "name": "bash",
+          "arguments": "{\"command\": \"tail -n 60 logs/panic_0.log\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 6,
+      "entry_id": "entry_006",
+      "role": "tool",
+      "tool_call_id": "call_c1_panic_0",
+      "content": "panic: runtime error: invalid memory address or nil pointer dereference [signal SIGSEGV: segmentation violation code=0x1 addr=0x0000000a]\n\ngoroutine 1131 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000239000, {0x1ac7f7, 0xc000d8a380}, 0xa1df0d18)\n\t/build/src/internal/worker/dispatcher.go:141 +0xc9e3\ngoroutine 1132 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc00005a100, {0x1ae967, 0xc000702980}, 0x49e05d98)\n\t/build/src/internal/worker/dispatcher.go:142 +0x3d03\ngoroutine 1133 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000825600, {0x1a322a, 0xc0007a1c80}, 0x7df5b05d)\n\t/build/src/internal/worker/dispatcher.go:143 +0x4ba7\ngoroutine 1134 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc00086eb00, {0x1a0bfa, 0xc000e60280}, 0x443d6052)\n\t/build/src/internal/worker/dispatcher.go:144 +0x10ad\ngoroutine 1135 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000c96900, {0x1a6f47, 0xc0009fb480}, 0x2bf7d0ab)\n\t/build/src/internal/worker/dispatcher.go:145 +0xedab\ngoroutine 1136 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc00053b800, {0x1a19ae, 0xc000fd0c80}, 0x3d7269ae)\n\t/build/src/internal/worker/dispatcher.go:146 +0x1359\ngoroutine 1137 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc0009da800, {0x1af25e, 0xc000d7c280}, 0x38625856)\n\t/build/src/internal/worker/dispatcher.go:147 +0x5e74\ngoroutine 1138 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000f86300, {0x1a0158, 0xc00056c280}, 0x1a1dd14c)\n\t/build/src/internal/worker/dispatcher.go:148 +0x0c8f\ngoroutine 1139 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000664300, {0x1a7c45, 0xc0009c5480}, 0x8368d551)\n\t/build/src/internal/worker/dispatcher.go:149 +0xc41e\ngoroutine 1140 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000a76b00, {0x1ae7cb, 0xc000eb6a80}, 0x0c0bf0a1)\n\t/build/src/internal/worker/dispatcher.go:150 +0x4fa9\ngoroutine 1141 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000c36400, {0x1a8914, 0xc000364180}, 0x17071756)\n\t/build/src/internal/worker/dispatcher.go:151 +0x820d\ngoroutine 1142 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000c1f800, {0x1a1075, 0xc000d2ae80}, 0xf13c4c27)\n\t/build/src/internal/worker/dispatcher.go:152 +0xdf30\ngoroutine 1143 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc00009fc00, {0x1ad7fd, 0xc000096280}, 0x4c7b16f7)\n\t/build/src/internal/worker/dispatcher.go:153 +0x0bef\ngoroutine 1144 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000465000, {0x1acf42, 0xc000700a80}, 0x4a54b261)\n\t/build/src/internal/worker/dispatcher.go:154 +0x4b68\ngoroutine 1145 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc00084d600, {0x1ac15b, 0xc0005e7180}, 0xfb7b0ae5)\n\t/build/src/internal/worker/dispatcher.go:155 +0x63f9\ngoroutine 1146 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc0009c6f00, {0x1a45ed, 0xc0002fcc80}, 0xcc5e73ab)\n\t/build/src/internal/worker/dispatcher.go:156 +0xee92\ngoroutine 1147 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000208800, {0x1a5ca2, 0xc00020b180}, 0x3fd2777d)\n\t/build/src/internal/worker/dispatcher.go:157 +0x6a87"
+    },
+    {
+      "turn_id": 7,
+      "entry_id": "entry_007",
+      "role": "assistant",
+      "content": "已查看 `panic_0.log` 的堆栈地址转储，属于空指针问题，与并发配置无关。"
+    },
+    {
+      "turn_id": 8,
+      "entry_id": "entry_008",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c1_panic_1",
+          "name": "bash",
+          "arguments": "{\"command\": \"tail -n 60 logs/panic_1.log\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 9,
+      "entry_id": "entry_009",
+      "role": "tool",
+      "tool_call_id": "call_c1_panic_1",
+      "content": "panic: runtime error: invalid memory address or nil pointer dereference [signal SIGSEGV: segmentation violation code=0x1 addr=0x0000000b]\n\ngoroutine 1144 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000576700, {0x1aab74, 0xc0007bd880}, 0x3e09c7be)\n\t/build/src/internal/worker/dispatcher.go:141 +0x1938\ngoroutine 1145 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000739000, {0x1a6233, 0xc000af4780}, 0xfa1f0efd)\n\t/build/src/internal/worker/dispatcher.go:142 +0xaa6a\ngoroutine 1146 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000444300, {0x1a2c9a, 0xc000d49980}, 0x4565cbbb)\n\t/build/src/internal/worker/dispatcher.go:143 +0x6b21\ngoroutine 1147 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000a51900, {0x1ae77f, 0xc000e41180}, 0xef072db7)\n\t/build/src/internal/worker/dispatcher.go:144 +0xb1a9\ngoroutine 1148 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000ed8600, {0x1aeb75, 0xc000907480}, 0x41c2dba5)\n\t/build/src/internal/worker/dispatcher.go:145 +0xad7a\ngoroutine 1149 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc0007f7f00, {0x1a3a67, 0xc000fcfd80}, 0x93dd4998)\n\t/build/src/internal/worker/dispatcher.go:146 +0xe869\ngoroutine 1150 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc0001d9000, {0x1a2906, 0xc000833c80}, 0xeba98457)\n\t/build/src/internal/worker/dispatcher.go:147 +0x9f14\ngoroutine 1151 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000315f00, {0x1a37bd, 0xc00095b480}, 0x31576353)\n\t/build/src/internal/worker/dispatcher.go:148 +0x0147\ngoroutine 1152 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc00081c900, {0x1a6fd1, 0xc000242b80}, 0x4c451355)\n\t/build/src/internal/worker/dispatcher.go:149 +0x5c00\ngoroutine 1153 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc00059cc00, {0x1a5a1f, 0xc000410580}, 0x3271d784)\n\t/build/src/internal/worker/dispatcher.go:150 +0x2ce8\ngoroutine 1154 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000377d00, {0x1afb0e, 0xc0009f4080}, 0xf388ec70)\n\t/build/src/internal/worker/dispatcher.go:151 +0x2bbf\ngoroutine 1155 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc0007e6000, {0x1a0cb1, 0xc000a68080}, 0x40ae3f2c)\n\t/build/src/internal/worker/dispatcher.go:152 +0x6b3a\ngoroutine 1156 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc0006bb600, {0x1a4d51, 0xc000e46580}, 0xdfbc4bda)\n\t/build/src/internal/worker/dispatcher.go:153 +0xb704\ngoroutine 1157 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000849500, {0x1ab569, 0xc000c2e680}, 0xb4abe654)\n\t/build/src/internal/worker/dispatcher.go:154 +0x5010\ngoroutine 1158 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc0008a6c00, {0x1ad5ca, 0xc000c4a280}, 0x22125622)\n\t/build/src/internal/worker/dispatcher.go:155 +0x4158\ngoroutine 1159 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000691c00, {0x1aa537, 0xc000a01580}, 0xa1383494)\n\t/build/src/internal/worker/dispatcher.go:156 +0xa690\ngoroutine 1160 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000c39800, {0x1ae64f, 0xc000eb4680}, 0xd3f888aa)\n\t/build/src/internal/worker/dispatcher.go:157 +0x237c"
+    },
+    {
+      "turn_id": 10,
+      "entry_id": "entry_010",
+      "role": "assistant",
+      "content": "已查看 `panic_1.log` 的堆栈地址转储，属于空指针问题，与并发配置无关。"
+    },
+    {
+      "turn_id": 11,
+      "entry_id": "entry_011",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c1_panic_2",
+          "name": "bash",
+          "arguments": "{\"command\": \"tail -n 60 logs/panic_2.log\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 12,
+      "entry_id": "entry_012",
+      "role": "tool",
+      "tool_call_id": "call_c1_panic_2",
+      "content": "panic: runtime error: invalid memory address or nil pointer dereference [signal SIGSEGV: segmentation violation code=0x1 addr=0x0000000c]\n\ngoroutine 1157 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc0004dba00, {0x1aab19, 0xc000930b80}, 0x063568bd)\n\t/build/src/internal/worker/dispatcher.go:141 +0x2708\ngoroutine 1158 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000bf0200, {0x1aa2ab, 0xc000192a80}, 0x89e32bdd)\n\t/build/src/internal/worker/dispatcher.go:142 +0x9e9d\ngoroutine 1159 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000812e00, {0x1acfd2, 0xc0005a5380}, 0xa7e2ddb9)\n\t/build/src/internal/worker/dispatcher.go:143 +0x9c75\ngoroutine 1160 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc00055c800, {0x1a5697, 0xc000eb9480}, 0xd42f82ba)\n\t/build/src/internal/worker/dispatcher.go:144 +0x88a0\ngoroutine 1161 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000882f00, {0x1ab156, 0xc00014fd80}, 0x6ddc486c)\n\t/build/src/internal/worker/dispatcher.go:145 +0xa7bd\ngoroutine 1162 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc0006c5500, {0x1a3f6f, 0xc0006ef180}, 0x09fbe1e6)\n\t/build/src/internal/worker/dispatcher.go:146 +0xf911\ngoroutine 1163 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000909000, {0x1a1079, 0xc00070f480}, 0x29e8bc68)\n\t/build/src/internal/worker/dispatcher.go:147 +0x2d1a\ngoroutine 1164 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc00091d600, {0x1ad3e5, 0xc0007e3b80}, 0xc4ecf7f2)\n\t/build/src/internal/worker/dispatcher.go:148 +0x3dbb\ngoroutine 1165 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000a32200, {0x1a481f, 0xc000d6f180}, 0x03b59f51)\n\t/build/src/internal/worker/dispatcher.go:149 +0x726c\ngoroutine 1166 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000294d00, {0x1a1dea, 0xc000914080}, 0xd120f726)\n\t/build/src/internal/worker/dispatcher.go:150 +0x932f\ngoroutine 1167 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc0008c3e00, {0x1ade84, 0xc000fd8680}, 0x95780f69)\n\t/build/src/internal/worker/dispatcher.go:151 +0x2c0a\ngoroutine 1168 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc00003e200, {0x1af5f5, 0xc0000c0c80}, 0xced467c2)\n\t/build/src/internal/worker/dispatcher.go:152 +0x0d83\ngoroutine 1169 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000d05500, {0x1a93e5, 0xc0001c9680}, 0xb2996c6f)\n\t/build/src/internal/worker/dispatcher.go:153 +0x98db\ngoroutine 1170 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000a51500, {0x1af409, 0xc000eadb80}, 0xd819171e)\n\t/build/src/internal/worker/dispatcher.go:154 +0x62b5\ngoroutine 1171 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000cb2900, {0x1a2aab, 0xc00029e080}, 0xac8ead7d)\n\t/build/src/internal/worker/dispatcher.go:155 +0x2981\ngoroutine 1172 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000871600, {0x1a7a43, 0xc000140a80}, 0x53fe16ba)\n\t/build/src/internal/worker/dispatcher.go:156 +0x66fa\ngoroutine 1173 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000689200, {0x1a9fa3, 0xc000a95180}, 0x56fae7f1)\n\t/build/src/internal/worker/dispatcher.go:157 +0xe51d"
+    },
+    {
+      "turn_id": 13,
+      "entry_id": "entry_013",
+      "role": "assistant",
+      "content": "已查看 `panic_2.log` 的堆栈地址转储，属于空指针问题，与并发配置无关。"
+    },
+    {
+      "turn_id": 14,
+      "entry_id": "entry_014",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c1_panic_3",
+          "name": "bash",
+          "arguments": "{\"command\": \"tail -n 60 logs/panic_3.log\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 15,
+      "entry_id": "entry_015",
+      "role": "tool",
+      "tool_call_id": "call_c1_panic_3",
+      "content": "panic: runtime error: invalid memory address or nil pointer dereference [signal SIGSEGV: segmentation violation code=0x1 addr=0x0000000d]\n\ngoroutine 1170 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000ecaf00, {0x1a1b20, 0xc00078b980}, 0x38c47906)\n\t/build/src/internal/worker/dispatcher.go:141 +0x4045\ngoroutine 1171 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc00030ed00, {0x1a86f9, 0xc000b61580}, 0xe93a5338)\n\t/build/src/internal/worker/dispatcher.go:142 +0x7b16\ngoroutine 1172 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc0005bea00, {0x1aacb9, 0xc000c24f80}, 0x4e9f8057)\n\t/build/src/internal/worker/dispatcher.go:143 +0xfaca\ngoroutine 1173 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000cdf400, {0x1aef05, 0xc0005e0380}, 0xc5b66fd0)\n\t/build/src/internal/worker/dispatcher.go:144 +0xef18\ngoroutine 1174 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000e62500, {0x1a389e, 0xc000812680}, 0x05cd4122)\n\t/build/src/internal/worker/dispatcher.go:145 +0x8648\ngoroutine 1175 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000236d00, {0x1a3426, 0xc000a12f80}, 0x82c89265)\n\t/build/src/internal/worker/dispatcher.go:146 +0x88f9\ngoroutine 1176 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc0009f8800, {0x1a446e, 0xc000eb9280}, 0xe86d6f20)\n\t/build/src/internal/worker/dispatcher.go:147 +0xc4d6\ngoroutine 1177 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000428200, {0x1af899, 0xc000d2c980}, 0x96190375)\n\t/build/src/internal/worker/dispatcher.go:148 +0x7afe\ngoroutine 1178 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000472000, {0x1a16f7, 0xc0006ec980}, 0xc1b275b7)\n\t/build/src/internal/worker/dispatcher.go:149 +0xf919\ngoroutine 1179 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc00067bb00, {0x1a461f, 0xc000d9bd80}, 0x3d0c3959)\n\t/build/src/internal/worker/dispatcher.go:150 +0x593c\ngoroutine 1180 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000e4b500, {0x1ab3a0, 0xc0007bbf80}, 0xe131042a)\n\t/build/src/internal/worker/dispatcher.go:151 +0x38e1\ngoroutine 1181 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc0008e5b00, {0x1af7ea, 0xc00006be80}, 0x3833b0b0)\n\t/build/src/internal/worker/dispatcher.go:152 +0xad36\ngoroutine 1182 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc00063b000, {0x1afc2c, 0xc000c5cd80}, 0xae436292)\n\t/build/src/internal/worker/dispatcher.go:153 +0xec5c\ngoroutine 1183 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc0008bdd00, {0x1a4cc2, 0xc0005b0380}, 0x0f7b894e)\n\t/build/src/internal/worker/dispatcher.go:154 +0x6f92\ngoroutine 1184 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000c28b00, {0x1a33f1, 0xc000d87880}, 0x773750fc)\n\t/build/src/internal/worker/dispatcher.go:155 +0x8c5d\ngoroutine 1185 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000c28700, {0x1a5e2a, 0xc00073d580}, 0xfc4c93dc)\n\t/build/src/internal/worker/dispatcher.go:156 +0x22d2\ngoroutine 1186 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000c31300, {0x1a0778, 0xc000098d80}, 0x91eeb5b0)\n\t/build/src/internal/worker/dispatcher.go:157 +0xae0c"
+    },
+    {
+      "turn_id": 16,
+      "entry_id": "entry_016",
+      "role": "assistant",
+      "content": "已查看 `panic_3.log` 的堆栈地址转储，属于空指针问题，与并发配置无关。"
+    },
+    {
+      "turn_id": 17,
+      "entry_id": "entry_017",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c1_panic_4",
+          "name": "bash",
+          "arguments": "{\"command\": \"tail -n 60 logs/panic_4.log\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 18,
+      "entry_id": "entry_018",
+      "role": "tool",
+      "tool_call_id": "call_c1_panic_4",
+      "content": "panic: runtime error: invalid memory address or nil pointer dereference [signal SIGSEGV: segmentation violation code=0x1 addr=0x0000000e]\n\ngoroutine 1183 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000377000, {0x1a6c1d, 0xc000661b80}, 0x797ccea5)\n\t/build/src/internal/worker/dispatcher.go:141 +0x232e\ngoroutine 1184 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000ce2500, {0x1acfab, 0xc000c81c80}, 0x3c531d9d)\n\t/build/src/internal/worker/dispatcher.go:142 +0x23b1\ngoroutine 1185 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000257500, {0x1ac650, 0xc000065180}, 0x6d84c3a5)\n\t/build/src/internal/worker/dispatcher.go:143 +0x8719\ngoroutine 1186 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc00004c300, {0x1a11b6, 0xc000a37180}, 0xe2964a80)\n\t/build/src/internal/worker/dispatcher.go:144 +0x5b1d\ngoroutine 1187 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc00038d400, {0x1a0fff, 0xc000d80380}, 0x471ff3ad)\n\t/build/src/internal/worker/dispatcher.go:145 +0x492a\ngoroutine 1188 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000920400, {0x1aa817, 0xc000d94b80}, 0xa75bc958)\n\t/build/src/internal/worker/dispatcher.go:146 +0x7102\ngoroutine 1189 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc0005cf400, {0x1ae6ff, 0xc000068080}, 0xd35682bc)\n\t/build/src/internal/worker/dispatcher.go:147 +0x208d\ngoroutine 1190 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000783b00, {0x1a8e58, 0xc0004b4180}, 0x339345b2)\n\t/build/src/internal/worker/dispatcher.go:148 +0x6fb8\ngoroutine 1191 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000c1f800, {0x1a9137, 0xc000b5a580}, 0x4134203a)\n\t/build/src/internal/worker/dispatcher.go:149 +0xce10\ngoroutine 1192 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000577a00, {0x1a092d, 0xc000a58e80}, 0xa23cc3b6)\n\t/build/src/internal/worker/dispatcher.go:150 +0xa530\ngoroutine 1193 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc00014ca00, {0x1aba5f, 0xc000a80c80}, 0x9fb74f62)\n\t/build/src/internal/worker/dispatcher.go:151 +0x5aa5\ngoroutine 1194 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc00095ea00, {0x1adf6a, 0xc000821a80}, 0x26513aee)\n\t/build/src/internal/worker/dispatcher.go:152 +0x8807\ngoroutine 1195 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000676200, {0x1ad5ba, 0xc000910080}, 0x43452094)\n\t/build/src/internal/worker/dispatcher.go:153 +0xad6c\ngoroutine 1196 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000a17400, {0x1a29f6, 0xc0000f6680}, 0x6f28ee3f)\n\t/build/src/internal/worker/dispatcher.go:154 +0xb78d\ngoroutine 1197 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000f83800, {0x1aaa12, 0xc0006ec280}, 0x75ed54fa)\n\t/build/src/internal/worker/dispatcher.go:155 +0xe1df\ngoroutine 1198 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc0006df700, {0x1ab52d, 0xc0007ce780}, 0x7ab0f996)\n\t/build/src/internal/worker/dispatcher.go:156 +0xb652\ngoroutine 1199 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000ac8f00, {0x1a842f, 0xc0006cf180}, 0xadb1cd78)\n\t/build/src/internal/worker/dispatcher.go:157 +0x6306"
+    },
+    {
+      "turn_id": 19,
+      "entry_id": "entry_019",
+      "role": "assistant",
+      "content": "已查看 `panic_4.log` 的堆栈地址转储，属于空指针问题，与并发配置无关。"
+    },
+    {
+      "turn_id": 20,
+      "entry_id": "entry_020",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c1_panic_5",
+          "name": "bash",
+          "arguments": "{\"command\": \"tail -n 60 logs/panic_5.log\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 21,
+      "entry_id": "entry_021",
+      "role": "tool",
+      "tool_call_id": "call_c1_panic_5",
+      "content": "panic: runtime error: invalid memory address or nil pointer dereference [signal SIGSEGV: segmentation violation code=0x1 addr=0x0000000f]\n\ngoroutine 1196 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000122900, {0x1ab1ce, 0xc000106480}, 0x6e3e63bd)\n\t/build/src/internal/worker/dispatcher.go:141 +0xc72d\ngoroutine 1197 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000d6f200, {0x1af191, 0xc000e9e080}, 0x42318bc8)\n\t/build/src/internal/worker/dispatcher.go:142 +0x6e85\ngoroutine 1198 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000744200, {0x1a1063, 0xc000a37c80}, 0xd91f4fd6)\n\t/build/src/internal/worker/dispatcher.go:143 +0x484a\ngoroutine 1199 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc00098de00, {0x1ae1fe, 0xc000bb5980}, 0x0f005a65)\n\t/build/src/internal/worker/dispatcher.go:144 +0x2b05\ngoroutine 1200 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000e16c00, {0x1a71c0, 0xc000391880}, 0x8562493e)\n\t/build/src/internal/worker/dispatcher.go:145 +0x2eb8\ngoroutine 1201 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc0002b5100, {0x1ad8e5, 0xc000456280}, 0x44dc653b)\n\t/build/src/internal/worker/dispatcher.go:146 +0x7b9c\ngoroutine 1202 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc0005c7700, {0x1a8a82, 0xc000504080}, 0x14e093a2)\n\t/build/src/internal/worker/dispatcher.go:147 +0xf6fb\ngoroutine 1203 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc00024a900, {0x1a71a9, 0xc000013180}, 0x22e16a47)\n\t/build/src/internal/worker/dispatcher.go:148 +0xe5b1\ngoroutine 1204 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc0002a7a00, {0x1a22ee, 0xc000517180}, 0x1d921c11)\n\t/build/src/internal/worker/dispatcher.go:149 +0xaf69\ngoroutine 1205 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000465400, {0x1a54e2, 0xc000fe7580}, 0xaf540e4d)\n\t/build/src/internal/worker/dispatcher.go:150 +0x383c\ngoroutine 1206 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc0008c4400, {0x1a2cf8, 0xc000748a80}, 0xe79a56a8)\n\t/build/src/internal/worker/dispatcher.go:151 +0x7ceb\ngoroutine 1207 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc0007e6b00, {0x1a469d, 0xc00097eb80}, 0xd14b28b3)\n\t/build/src/internal/worker/dispatcher.go:152 +0xb6de\ngoroutine 1208 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000794300, {0x1a41f4, 0xc0008fc480}, 0xedfa34e7)\n\t/build/src/internal/worker/dispatcher.go:153 +0x3deb\ngoroutine 1209 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc00054bb00, {0x1a4d40, 0xc000934280}, 0x3c248ee4)\n\t/build/src/internal/worker/dispatcher.go:154 +0xe407\ngoroutine 1210 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc000e61200, {0x1a2079, 0xc000f42a80}, 0x275a2d5f)\n\t/build/src/internal/worker/dispatcher.go:155 +0xfcf0\ngoroutine 1211 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc0008e9800, {0x1afef8, 0xc000755180}, 0x9efc93d8)\n\t/build/src/internal/worker/dispatcher.go:156 +0x3bd9\ngoroutine 1212 [running]:\napp/internal/worker.(*Dispatcher).dispatchLoop(0xc0001b6700, {0x1a7485, 0xc00098ad80}, 0xeeda92d2)\n\t/build/src/internal/worker/dispatcher.go:157 +0x39f8"
+    },
+    {
+      "turn_id": 22,
+      "entry_id": "entry_022",
+      "role": "assistant",
+      "content": "已查看 `panic_5.log` 的堆栈地址转储，属于空指针问题，与并发配置无关。"
+    },
+    {
+      "turn_id": 23,
+      "entry_id": "entry_023",
+      "role": "user",
+      "content": "把日志里的字段名 `invoce_id` 第 1 处拼写再顺手改回 `invoice_id`。"
+    },
+    {
+      "turn_id": 24,
+      "entry_id": "entry_024",
+      "role": "assistant",
+      "content": "已修正第 1 处拼写 typo 为 `invoice_id`。"
+    },
+    {
+      "turn_id": 25,
+      "entry_id": "entry_025",
+      "role": "user",
+      "content": "把日志里的字段名 `invoce_id` 第 2 处拼写再顺手改回 `invoice_id`。"
+    },
+    {
+      "turn_id": 26,
+      "entry_id": "entry_026",
+      "role": "assistant",
+      "content": "已修正第 2 处拼写 typo 为 `invoice_id`。"
+    },
+    {
+      "turn_id": 27,
+      "entry_id": "entry_027",
+      "role": "user",
+      "content": "把日志里的字段名 `invoce_id` 第 3 处拼写再顺手改回 `invoice_id`。"
+    },
+    {
+      "turn_id": 28,
+      "entry_id": "entry_028",
+      "role": "assistant",
+      "content": "已修正第 3 处拼写 typo 为 `invoice_id`。"
+    },
+    {
+      "turn_id": 29,
+      "entry_id": "entry_029",
+      "role": "user",
+      "content": "把日志里的字段名 `invoce_id` 第 4 处拼写再顺手改回 `invoice_id`。"
+    },
+    {
+      "turn_id": 30,
+      "entry_id": "entry_030",
+      "role": "assistant",
+      "content": "已修正第 4 处拼写 typo 为 `invoice_id`。"
+    },
+    {
+      "turn_id": 31,
+      "entry_id": "entry_031",
+      "role": "user",
+      "content": "把日志里的字段名 `invoce_id` 第 5 处拼写再顺手改回 `invoice_id`。"
+    },
+    {
+      "turn_id": 32,
+      "entry_id": "entry_032",
+      "role": "assistant",
+      "content": "已修正第 5 处拼写 typo 为 `invoice_id`。"
+    },
+    {
+      "turn_id": 33,
+      "entry_id": "entry_033",
+      "role": "user",
+      "content": "把日志里的字段名 `invoce_id` 第 6 处拼写再顺手改回 `invoice_id`。"
+    },
+    {
+      "turn_id": 34,
+      "entry_id": "entry_034",
+      "role": "assistant",
+      "content": "已修正第 6 处拼写 typo 为 `invoice_id`。"
+    }
+  ],
+  "eval_probes": [
+    {
+      "probe_id": "probe_c1",
+      "at_turn": 34,
+      "query": "为了加快大商户月末开票导出速度，我把导出服务配置里的 `WorkerPoolSize` 调到 16，这样上线稳妥吗？",
+      "required_evidence_entry_ids": [
+        "entry_003"
+      ],
+      "forbidden_superseded_entry_ids": [],
+      "expected_rubric": [
+        "明确阻止将 WorkerPoolSize 调到 16",
+        "准确指出下游税务网关限制单商户 QPS=2，worker 并发硬上限为 2，超限有被拉黑 24 小时风险"
+      ]
+    }
+  ]
+}

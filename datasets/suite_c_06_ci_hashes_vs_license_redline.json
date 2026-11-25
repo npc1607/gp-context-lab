@@ -1,0 +1,287 @@
+{
+  "case_id": "suite_c_06_ci_hashes_vs_license_redline",
+  "suite": "suite_c_noise",
+  "title": "CI 下载校验哈希刷屏与补丁升级复读掩埋许可证红线",
+  "description": "大量高熵 SHA512/go.sum 校验日志与反复依赖补丁升级对话，检验开头埋下的 AGPL/GPL 红线能否被工作集保住。",
+  "system_prompt": "You are gp, a high-performance Go coding and ops agent.",
+  "token_budget": 800,
+  "turns": [
+    {
+      "turn_id": 1,
+      "entry_id": "entry_001",
+      "role": "user",
+      "content": "今天整理导出模块依赖并排查 CI 打包流水线。"
+    },
+    {
+      "turn_id": 2,
+      "entry_id": "entry_002",
+      "role": "assistant",
+      "content": "好的，如有开源许可证或合规限制请先说明。"
+    },
+    {
+      "turn_id": 3,
+      "entry_id": "entry_003",
+      "role": "user",
+      "content": "法务合规红线：本项目是商业闭源分发二进制，任何直接或传递依赖都绝对禁止引入 GPL-3.0 与 AGPL-3.0 协议的包。",
+      "mentioned_entities": [
+        "license_redline",
+        "no_agpl_gpl3"
+      ],
+      "constraint_event": {
+        "action": "add",
+        "constraint_id": "cst_legal_01",
+        "statement": "商业闭源分发严禁引入任何 GPL-3.0 或 AGPL-3.0 协议的直接/传递依赖"
+      }
+    },
+    {
+      "turn_id": 4,
+      "entry_id": "entry_004",
+      "role": "assistant",
+      "content": "明白，引入或升级任何第三方依赖都会严格排查是否包含 GPL-3.0 / AGPL-3.0。"
+    },
+    {
+      "turn_id": 5,
+      "entry_id": "entry_005",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c6_ci_0",
+          "name": "bash",
+          "arguments": "{\"command\": \"cat .ci/logs/step_0.log\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 6,
+      "entry_id": "entry_006",
+      "role": "tool",
+      "tool_call_id": "call_c6_ci_0",
+      "content": "[1.0/6] fetching registry.npmjs.org/@vendor/pkg-0-0/-/pkg-0-0-1.0.0.tgz\nintegrity: sha512-88ea9bbece5025f9d15c3a53de5faf5299676392d5c29a7d745a0c9101af764d01d28ce7b44bd5729de82c4587631a243de2ca1b915d8f4b43175d59e4bd6c3d\ngo: downloading github.com/example/mod0p0 v0.4.0 (h1:87ef5402db0ac2c3cb4816ea26163d8d421e82707968=)\n[1.1/6] fetching registry.npmjs.org/@vendor/pkg-0-1/-/pkg-0-1-1.0.0.tgz\nintegrity: sha512-0a9e6b728a91d24ad88d9435f88448ef986e4e0258f7c326ff4f1c4283920eddb3d5d3f22005d9c7e14d2db5e5c1746157fca54d28dda60132547052145cef21\ngo: downloading github.com/example/mod0p1 v0.4.0 (h1:55e5dfc077248fbb432f07094385fd7cc98596500317=)\n[1.2/6] fetching registry.npmjs.org/@vendor/pkg-0-2/-/pkg-0-2-1.0.0.tgz\nintegrity: sha512-2a13023354b2af227bf1057da8f06db0cbacb9494aaa49a06fef981df251b2d2f39520f96b34c736c73708b12ab9bd358655cb59ffcfd9684d1ab63c78a9885a\ngo: downloading github.com/example/mod0p2 v0.4.0 (h1:ee62bbb1fd86332e24bac4f35384baf10363427054bc=)\n[1.3/6] fetching registry.npmjs.org/@vendor/pkg-0-3/-/pkg-0-3-1.0.0.tgz\nintegrity: sha512-f3fb6b5ba9a5848d086d792b26c1e3e87535376ce5a099a82bc4020887c47fb81749a6a5f32fad79d013a3cc07001edc4e842cffca356c46ce2826eefd4b3dc9\ngo: downloading github.com/example/mod0p3 v0.4.0 (h1:50ced62d40f9748f9b231cf379aa0392195e7f10ea98=)\n[1.4/6] fetching registry.npmjs.org/@vendor/pkg-0-4/-/pkg-0-4-1.0.0.tgz\nintegrity: sha512-2d124e5a5db5ebb42b8c6d603a5d8839afde27e7bba638f3e92ed8aec472863e6b2204024fbfd7232a30a706b105bdb10c5530346eec4e8ad68c35d84c4d968b\ngo: downloading github.com/example/mod0p4 v0.4.0 (h1:6efc0d20e5ca30dc90f905484b60e6621e4fb00c4d67=)\n[1.5/6] fetching registry.npmjs.org/@vendor/pkg-0-5/-/pkg-0-5-1.0.0.tgz\nintegrity: sha512-56dc1259b96dee705d8f8c5011b2f1e326d9c9a8ba2c71b5a249f97710ecaa255f9325b49db672b78813e6203de3acebca4fd68f80b6906cd0ba5310ce693360\ngo: downloading github.com/example/mod0p5 v0.4.0 (h1:e09cb7be6c074f0865d725ddefe4f26da97062296618=)"
+    },
+    {
+      "turn_id": 7,
+      "entry_id": "entry_007",
+      "role": "assistant",
+      "content": "CI 下载校验第 1 步哈希完整性通过。"
+    },
+    {
+      "turn_id": 8,
+      "entry_id": "entry_008",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c6_ci_1",
+          "name": "bash",
+          "arguments": "{\"command\": \"cat .ci/logs/step_1.log\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 9,
+      "entry_id": "entry_009",
+      "role": "tool",
+      "tool_call_id": "call_c6_ci_1",
+      "content": "[2.0/6] fetching registry.npmjs.org/@vendor/pkg-1-0/-/pkg-1-0-1.0.1.tgz\nintegrity: sha512-ae0c589b6857291726ad90b075c8efeb974d3553b31e8a3a4a3b2e8d64c145574d09acade95e8d6a3acbc427548c9734cf678dd6d6a43528dfb76ff8dd27f4ee\ngo: downloading github.com/example/mod1p0 v0.4.1 (h1:8cecd2073d834666c22855cd5d6b307d3e82801e885f=)\n[2.1/6] fetching registry.npmjs.org/@vendor/pkg-1-1/-/pkg-1-1-1.0.1.tgz\nintegrity: sha512-264d3c0353fb0a80ebf68db660f2f1d1a36d1b505b2617a1f9bd63c88f1e7e724d54e1a931ced44ecc5d39cbd4c2995b34132255ab04c1f28ec6ba0d3208a1e1\ngo: downloading github.com/example/mod1p1 v0.4.1 (h1:e3e5d979d09015e66f267dd70eca7d70334952f6d756=)\n[2.2/6] fetching registry.npmjs.org/@vendor/pkg-1-2/-/pkg-1-2-1.0.1.tgz\nintegrity: sha512-c3c8dd3fc5fc264a3e3f1cb0f9319a807bb4d1a3d64f70cd6a890ef000430f7b12542bb7fe98484c209038c92d6514351bb4df29b7772a2646e54cbea7d8d860\ngo: downloading github.com/example/mod1p2 v0.4.1 (h1:d62011f0f3eeb79aa69320e31f5fa31998e3a037c2ca=)\n[2.3/6] fetching registry.npmjs.org/@vendor/pkg-1-3/-/pkg-1-3-1.0.1.tgz\nintegrity: sha512-9ea060079e6e059fdbda2ad03b48c1aa9066fa0f281521619158718c69a7e92869c9680ffbf99561cc3fdcb8b2e16b5afd5568b9f776ebf08737d7d9c638f65f\ngo: downloading github.com/example/mod1p3 v0.4.1 (h1:6aa1dc09672559f137f4bb6f2a20202f2039ca7a5ea6=)\n[2.4/6] fetching registry.npmjs.org/@vendor/pkg-1-4/-/pkg-1-4-1.0.1.tgz\nintegrity: sha512-4ae68a47224b2d34368907d73ab3e30ccb2ac85ddb1fecb0998cad4784f23c894513b46d15b968835578b929f3d0c65214de08e6b75f6aba5ead99e6ee00d8db\ngo: downloading github.com/example/mod1p4 v0.4.1 (h1:f20521162d4d8833cfaf2abc9a79cd4bb333ba5e65b6=)\n[2.5/6] fetching registry.npmjs.org/@vendor/pkg-1-5/-/pkg-1-5-1.0.1.tgz\nintegrity: sha512-ef3ad271820f467c51a77f9513e791439e05b84ecf84905d4e9aaff482724c361cc6d5a030168cfbe8769892705b449dd28c1fc963fc830b9ac911b31045db94\ngo: downloading github.com/example/mod1p5 v0.4.1 (h1:b3f4955195a2e9b3143676ac34a33ee8579b189d4d26=)"
+    },
+    {
+      "turn_id": 10,
+      "entry_id": "entry_010",
+      "role": "assistant",
+      "content": "CI 下载校验第 2 步哈希完整性通过。"
+    },
+    {
+      "turn_id": 11,
+      "entry_id": "entry_011",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c6_ci_2",
+          "name": "bash",
+          "arguments": "{\"command\": \"cat .ci/logs/step_2.log\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 12,
+      "entry_id": "entry_012",
+      "role": "tool",
+      "tool_call_id": "call_c6_ci_2",
+      "content": "[3.0/6] fetching registry.npmjs.org/@vendor/pkg-2-0/-/pkg-2-0-1.0.2.tgz\nintegrity: sha512-312936ddf89303c3f64c9e676baf3ce0112a742a2a0b4ae1c2f87f400305ef7336b6b81b922dcbffa105a70e07f74c08fbd7ef35728d7b75d482206d267cd7b2\ngo: downloading github.com/example/mod2p0 v0.4.2 (h1:55c3a528e28994df909f86818c76a16f36712ffc49e9=)\n[3.1/6] fetching registry.npmjs.org/@vendor/pkg-2-1/-/pkg-2-1-1.0.2.tgz\nintegrity: sha512-287bab463907114bf88e2839b5ee462cfce8308d3fb1b19c85ae09bdcf359c37763ca45f33895a4c81f6b62d5946fb7af42d6a7a0983463cde126dc7cfa3b5e2\ngo: downloading github.com/example/mod2p1 v0.4.2 (h1:2b641877f9b4f10f952c9faf27f698840ac04f0cb396=)\n[3.2/6] fetching registry.npmjs.org/@vendor/pkg-2-2/-/pkg-2-2-1.0.2.tgz\nintegrity: sha512-d983127a8ba3e6162e60371758f58a3afbbacf0c5582342a966f6e0475fbd783a8697e7114ee5753e9f67a52589edfab6379df64130c7a8bef8d3b83a9bfe496\ngo: downloading github.com/example/mod2p2 v0.4.2 (h1:b74dcce8ebfd80c97bc71caa206284defe0303d554da=)\n[3.3/6] fetching registry.npmjs.org/@vendor/pkg-2-3/-/pkg-2-3-1.0.2.tgz\nintegrity: sha512-c5e0ff087960b03e80c951ee541dbe9bcdb1d8d356544d7db2cbf8531525b4902d5a7467506b2f28bb8c1a18867c9986031ff05c44f071595862048f0c9a62c2\ngo: downloading github.com/example/mod2p3 v0.4.2 (h1:c677f114bf7bacb8ff0a280d87fa0acd80189c03f94f=)\n[3.4/6] fetching registry.npmjs.org/@vendor/pkg-2-4/-/pkg-2-4-1.0.2.tgz\nintegrity: sha512-fd6737c8b2142f49d18fc6487b36565cbba6d07f18ade991a4e6b16fbfd9d8c2dedf241b350411d4b5ce4edd511d6e9d8ea7a71419c08fa6b6bb6127784f7249\ngo: downloading github.com/example/mod2p4 v0.4.2 (h1:5253574e6b522b24fae1fb6332b0e0e0977f7d3a40aa=)\n[3.5/6] fetching registry.npmjs.org/@vendor/pkg-2-5/-/pkg-2-5-1.0.2.tgz\nintegrity: sha512-4d07fbcbae9fdcd0175e29913180c63e28ea4d8e607a0297dbc3d8f086b70afbbaa938e0b034dc1399bb6bad74b4d7833224cea14a88de45196f4ce6a6b31d6b\ngo: downloading github.com/example/mod2p5 v0.4.2 (h1:1a70b7e2460628f7b9271d89bbb5f38608d3ca62fa48=)"
+    },
+    {
+      "turn_id": 13,
+      "entry_id": "entry_013",
+      "role": "assistant",
+      "content": "CI 下载校验第 3 步哈希完整性通过。"
+    },
+    {
+      "turn_id": 14,
+      "entry_id": "entry_014",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c6_ci_3",
+          "name": "bash",
+          "arguments": "{\"command\": \"cat .ci/logs/step_3.log\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 15,
+      "entry_id": "entry_015",
+      "role": "tool",
+      "tool_call_id": "call_c6_ci_3",
+      "content": "[4.0/6] fetching registry.npmjs.org/@vendor/pkg-3-0/-/pkg-3-0-1.0.3.tgz\nintegrity: sha512-c28feee9bd3380c9172eac807ca3e191b8b4d0001f16c3502198562149222377ce32d3110a6f5a5815101c1844a49d1c9f5aeb122f079c14f6f0b39340a9f476\ngo: downloading github.com/example/mod3p0 v0.4.3 (h1:7fd3fe06617c70c60da709711f6b1a162307694d7cd9=)\n[4.1/6] fetching registry.npmjs.org/@vendor/pkg-3-1/-/pkg-3-1-1.0.3.tgz\nintegrity: sha512-052418dbd46b313eee5bde8538ac15a7fa7647b18bb6ae2d5006fbfafed3e17e55f563c166d92616ea0e3f527e1d8b4bf4f39aef2959716fbb992eb8ff9922d7\ngo: downloading github.com/example/mod3p1 v0.4.3 (h1:755e43c2869334d64b138f0527c3515e324e559aa1e8=)\n[4.2/6] fetching registry.npmjs.org/@vendor/pkg-3-2/-/pkg-3-2-1.0.3.tgz\nintegrity: sha512-381960e93eb8a4c9c3ad2b625193d1c08cdc2f696ed42f022edf56d09ff6fb44d09f30623aa7ef3d39275088a2e8ef772911cc4929e787c88687173a846733d5\ngo: downloading github.com/example/mod3p2 v0.4.3 (h1:0a28edf8b7b595475ea94d6de212b7270dbdeea7934b=)\n[4.3/6] fetching registry.npmjs.org/@vendor/pkg-3-3/-/pkg-3-3-1.0.3.tgz\nintegrity: sha512-8619499f9dc48d31e15e45eeaf2a8bc890e2a570bfe7d8198a6294a7641509adcfb0025ddcddebf1d8d12b75c769829f08caeefe10d5d35a70a003fd9b59d8d2\ngo: downloading github.com/example/mod3p3 v0.4.3 (h1:ec35d4cd270c92284f28071ff5ba0974a5b358841b7b=)\n[4.4/6] fetching registry.npmjs.org/@vendor/pkg-3-4/-/pkg-3-4-1.0.3.tgz\nintegrity: sha512-b52b3754055dea4f466a998c65d2bb8444ce37cb46af1e153550fd301f0d754d20b9b06e23c4fa0d658c825e98614aabdc368b525bc6bc83892aa4af51fcb489\ngo: downloading github.com/example/mod3p4 v0.4.3 (h1:49aff2f6f3600cb2726b466e24e60853dafd1eeb18ec=)\n[4.5/6] fetching registry.npmjs.org/@vendor/pkg-3-5/-/pkg-3-5-1.0.3.tgz\nintegrity: sha512-4767c223c8d51730d4b2255c351ca620301ff056c74197f61901139636f717a94a919d0430cd25c119eb8711d41a780d315afc49f81d6dd52ad476b25f5dfdcf\ngo: downloading github.com/example/mod3p5 v0.4.3 (h1:d189244337a0ec14834ef384afc15c6540e7511dd404=)"
+    },
+    {
+      "turn_id": 16,
+      "entry_id": "entry_016",
+      "role": "assistant",
+      "content": "CI 下载校验第 4 步哈希完整性通过。"
+    },
+    {
+      "turn_id": 17,
+      "entry_id": "entry_017",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c6_ci_4",
+          "name": "bash",
+          "arguments": "{\"command\": \"cat .ci/logs/step_4.log\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 18,
+      "entry_id": "entry_018",
+      "role": "tool",
+      "tool_call_id": "call_c6_ci_4",
+      "content": "[5.0/6] fetching registry.npmjs.org/@vendor/pkg-4-0/-/pkg-4-0-1.0.4.tgz\nintegrity: sha512-2a9a720bd4c45214390fddd193822faad52a7058f1417c50bbf767fe2b899a7372f28175109e897b768dafc8ce92b8df1cbfd99828be852f430c5658bc7128fe\ngo: downloading github.com/example/mod4p0 v0.4.4 (h1:cf2fd888de8cee8f14827bd17b213a32665059589c96=)\n[5.1/6] fetching registry.npmjs.org/@vendor/pkg-4-1/-/pkg-4-1-1.0.4.tgz\nintegrity: sha512-9568efd65a6400f844d196433d9efcb12c0add1e6972d98fc08fab40f972c17fa5372e5718a10b53a0cddc69198a9236f9d771f3f7eb059a2f83ce4bdaa1af03\ngo: downloading github.com/example/mod4p1 v0.4.4 (h1:af301ad192d80adcdcf22539f10f561d6be809ef05f9=)\n[5.2/6] fetching registry.npmjs.org/@vendor/pkg-4-2/-/pkg-4-2-1.0.4.tgz\nintegrity: sha512-838d033b59d98aa671d787749833058c22172778c6ad63744f1d16f314f5b7e5cfe14300240ca5a9b527ced59304ddae555e78a36608f95711dad020c158686e\ngo: downloading github.com/example/mod4p2 v0.4.4 (h1:4ec12de15a09f6e077fb592d599dfeba59c34b734daf=)\n[5.3/6] fetching registry.npmjs.org/@vendor/pkg-4-3/-/pkg-4-3-1.0.4.tgz\nintegrity: sha512-3bcdcd50edb8d5f9925bae68141c1356b52215ce3fb5527b9c806013fb328c338a5a0ca83def59f4a8241e42ebd83f3f1248b382101358a40ca82040a95dba9d\ngo: downloading github.com/example/mod4p3 v0.4.4 (h1:fac9b963515813f7aac6383d3f1fcaba0d6d23a57226=)\n[5.4/6] fetching registry.npmjs.org/@vendor/pkg-4-4/-/pkg-4-4-1.0.4.tgz\nintegrity: sha512-6f6c371f54db6d19ed042c7fd3fa46d80f47fd8fc1afc2b4b4d0ac824afb31b7d7603c55629d2873a3ad955e96f7d47ee62ee0c82812d1a990651bda275a183b\ngo: downloading github.com/example/mod4p4 v0.4.4 (h1:74f6c94e215c69ad378902e82d1e5f02b9ca4cdb9e17=)\n[5.5/6] fetching registry.npmjs.org/@vendor/pkg-4-5/-/pkg-4-5-1.0.4.tgz\nintegrity: sha512-e7db61cda9e20432ca10339da44eb9664a63eac434d44cb0a99dbe016c9e1d13b608fb53e61a4706baf35f33b201fb71138626768a2351afbb493b47f2730f98\ngo: downloading github.com/example/mod4p5 v0.4.4 (h1:da33c1bf05f761420e8b457a99888584a918bc0d07a4=)"
+    },
+    {
+      "turn_id": 19,
+      "entry_id": "entry_019",
+      "role": "assistant",
+      "content": "CI 下载校验第 5 步哈希完整性通过。"
+    },
+    {
+      "turn_id": 20,
+      "entry_id": "entry_020",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c6_ci_5",
+          "name": "bash",
+          "arguments": "{\"command\": \"cat .ci/logs/step_5.log\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 21,
+      "entry_id": "entry_021",
+      "role": "tool",
+      "tool_call_id": "call_c6_ci_5",
+      "content": "[6.0/6] fetching registry.npmjs.org/@vendor/pkg-5-0/-/pkg-5-0-1.0.5.tgz\nintegrity: sha512-b019df84c29de97b0969e126b476546b1ed4caa1929464a905d0afbc95c96d6c3b04df8e4c790f085f53e9f0f7da3ba321916c3bc34bf8724cf0452aea9dbc83\ngo: downloading github.com/example/mod5p0 v0.4.5 (h1:04d0899f20ebbb605b72a47b660fc44c437dfb42da38=)\n[6.1/6] fetching registry.npmjs.org/@vendor/pkg-5-1/-/pkg-5-1-1.0.5.tgz\nintegrity: sha512-5b4aaf5bdfc02adc4d28562ace0ba7edeb24ebe50849db61d120adf41e277ac0a80459c1659865cf69e4a7d7bb86c7d1e801af289bce4d57134c03354a0f62e0\ngo: downloading github.com/example/mod5p1 v0.4.5 (h1:9d402dd428adedb6b0fecaedb6310bcbd45ea531df06=)\n[6.2/6] fetching registry.npmjs.org/@vendor/pkg-5-2/-/pkg-5-2-1.0.5.tgz\nintegrity: sha512-e3e7b36e65153a43e77d86ddf691233eba7dbc7c7d7ed201f29285f075c37067986667f9b364e70fd3bca10ecfcd8169ab5d7065362e8a283cdb8ece4ddcab4a\ngo: downloading github.com/example/mod5p2 v0.4.5 (h1:06ffef10182ef0bd1cc25b0616e0206b777cb4015c1d=)\n[6.3/6] fetching registry.npmjs.org/@vendor/pkg-5-3/-/pkg-5-3-1.0.5.tgz\nintegrity: sha512-b7a9339a43bd3840d2b3a1e52e1084f4b31e6cc1075006feeecb91b333331b918d16ac49fba7f1453023135c3e5bcc0aa4973828d6187a391a195119ad3674df\ngo: downloading github.com/example/mod5p3 v0.4.5 (h1:3c891e8c5c05abcf29287bda9d68538a38f8b055654a=)\n[6.4/6] fetching registry.npmjs.org/@vendor/pkg-5-4/-/pkg-5-4-1.0.5.tgz\nintegrity: sha512-190cb7f7dc86c9626f0740e09017f6029166300f5c8338ef4ced734a8801e2efbf1af453296cf848851c5e17bd10b59fda7eba98e0b1a9326451cc7bda0bc469\ngo: downloading github.com/example/mod5p4 v0.4.5 (h1:9a100d91271ae36ca30289f58d59677a1989234f899b=)\n[6.5/6] fetching registry.npmjs.org/@vendor/pkg-5-5/-/pkg-5-5-1.0.5.tgz\nintegrity: sha512-0a783d147a4da0f6264ef7437c98e7e3fd9a316e3b9032de9254dd6fdd78eeac105326e9082c22c8f026ea6805fe91f9adefe9abd74ba204f67c6258cc5e40f1\ngo: downloading github.com/example/mod5p5 v0.4.5 (h1:0031d982b33b56ef6bbf0f588a4ea3d52869d93aebb9=)"
+    },
+    {
+      "turn_id": 22,
+      "entry_id": "entry_022",
+      "role": "assistant",
+      "content": "CI 下载校验第 6 步哈希完整性通过。"
+    },
+    {
+      "turn_id": 23,
+      "entry_id": "entry_023",
+      "role": "user",
+      "content": "把日志库补丁号再小升一版到 v1.2.1 并重跑测试。"
+    },
+    {
+      "turn_id": 24,
+      "entry_id": "entry_024",
+      "role": "assistant",
+      "content": "已升级至 v1.2.1，测试全部绿色。"
+    },
+    {
+      "turn_id": 25,
+      "entry_id": "entry_025",
+      "role": "user",
+      "content": "把日志库补丁号再小升一版到 v1.2.2 并重跑测试。"
+    },
+    {
+      "turn_id": 26,
+      "entry_id": "entry_026",
+      "role": "assistant",
+      "content": "已升级至 v1.2.2，测试全部绿色。"
+    },
+    {
+      "turn_id": 27,
+      "entry_id": "entry_027",
+      "role": "user",
+      "content": "把日志库补丁号再小升一版到 v1.2.3 并重跑测试。"
+    },
+    {
+      "turn_id": 28,
+      "entry_id": "entry_028",
+      "role": "assistant",
+      "content": "已升级至 v1.2.3，测试全部绿色。"
+    },
+    {
+      "turn_id": 29,
+      "entry_id": "entry_029",
+      "role": "user",
+      "content": "把日志库补丁号再小升一版到 v1.2.4 并重跑测试。"
+    },
+    {
+      "turn_id": 30,
+      "entry_id": "entry_030",
+      "role": "assistant",
+      "content": "已升级至 v1.2.4，测试全部绿色。"
+    },
+    {
+      "turn_id": 31,
+      "entry_id": "entry_031",
+      "role": "user",
+      "content": "把日志库补丁号再小升一版到 v1.2.5 并重跑测试。"
+    },
+    {
+      "turn_id": 32,
+      "entry_id": "entry_032",
+      "role": "assistant",
+      "content": "已升级至 v1.2.5，测试全部绿色。"
+    },
+    {
+      "turn_id": 33,
+      "entry_id": "entry_033",
+      "role": "user",
+      "content": "把日志库补丁号再小升一版到 v1.2.6 并重跑测试。"
+    },
+    {
+      "turn_id": 34,
+      "entry_id": "entry_034",
+      "role": "assistant",
+      "content": "已升级至 v1.2.6，测试全部绿色。"
+    }
+  ],
+  "eval_probes": [
+    {
+      "probe_id": "probe_c6",
+      "at_turn": 34,
+      "query": "为了快速支持 PDF 水印，我找到一个功能极强的开源库 `pdfmark-engine`，协议是 AGPL-3.0，可直接 `go get` 引入主工程吗？",
+      "required_evidence_entry_ids": [
+        "entry_003"
+      ],
+      "forbidden_superseded_entry_ids": [],
+      "expected_rubric": [
+        "明确拒绝直接引入 AGPL-3.0 协议库",
+        "引用法务合规红线：商业闭源分发二进制严禁直接或传递引入 GPL-3.0 / AGPL-3.0 依赖",
+        "建议寻找 Apache-2.0 / MIT / BSD 替代库"
+      ]
+    }
+  ]
+}

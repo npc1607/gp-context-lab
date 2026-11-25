@@ -1,0 +1,400 @@
+{
+  "case_id": "suite_a_02_arm64_cgo_cross_compile",
+  "suite": "suite_a_multihop",
+  "title": "极简静态交叉编译红线与 SQLite 驱动选型多跳关联",
+  "description": "早期声明目标运行环境为极简静态容器且跨平台交叉编译，经 Makefile 和 storage/driver.go 桥接，末轮询问换用 mattn/go-sqlite3 是否可行。",
+  "system_prompt": "You are gp, a high-performance Go coding and ops agent.",
+  "token_budget": 900,
+  "turns": [
+    {
+      "turn_id": 1,
+      "entry_id": "entry_001",
+      "role": "user",
+      "content": "生产部署红线：线上跑在无动态链接库的极简 Alpine 容器里，目标芯片是华为鲲鹏与 AWS Graviton，开发机却是 Apple Silicon；构建产物必须保证纯静态零外部系统库依赖。",
+      "mentioned_entities": [
+        "alpine_static",
+        "arm64_target",
+        "zero_cgo"
+      ],
+      "constraint_event": {
+        "action": "add",
+        "constraint_id": "cst_cgo_01",
+        "statement": "必须保持零 CGO 纯静态交叉编译（CGO_ENABLED=0），严禁引入需 GCC 编译的 C 绑定库"
+      }
+    },
+    {
+      "turn_id": 2,
+      "entry_id": "entry_002",
+      "role": "assistant",
+      "content": "收到，所有依赖与编译脚本都会保证纯静态无系统库链接。"
+    },
+    {
+      "turn_id": 3,
+      "entry_id": "entry_003",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_a2_1",
+          "name": "read",
+          "arguments": "{\"path\": \"Makefile\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 4,
+      "entry_id": "entry_004",
+      "role": "tool",
+      "tool_call_id": "call_a2_1",
+      "content": "build-prod:\n\tCGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags='-s -w' -o bin/svc ./cmd/svc\n",
+      "mentioned_entities": [
+        "Makefile",
+        "zero_cgo",
+        "arm64_target"
+      ]
+    },
+    {
+      "turn_id": 5,
+      "entry_id": "entry_005",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_a2_2",
+          "name": "read",
+          "arguments": "{\"path\": \"internal/storage/driver.go\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 6,
+      "entry_id": "entry_006",
+      "role": "tool",
+      "tool_call_id": "call_a2_2",
+      "content": "package storage\n\nimport (\n\t\"database/sql\"\n\t_ \"modernc.org/sqlite\"\n)\n\nfunc OpenLocalCache(path string) (*sql.DB, error) {\n\treturn sql.Open(\"sqlite\", path)\n}\n",
+      "mentioned_entities": [
+        "internal/storage/driver.go",
+        "modernc.org/sqlite",
+        "OpenLocalCache"
+      ]
+    },
+    {
+      "turn_id": 7,
+      "entry_id": "entry_007",
+      "role": "user",
+      "content": "查看下 HTTP 服务的优雅退出逻辑。"
+    },
+    {
+      "turn_id": 8,
+      "entry_id": "entry_008",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_dist_8_0",
+          "name": "read",
+          "arguments": "{\"path\": \"cmd/svc/main.go\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 9,
+      "entry_id": "entry_009",
+      "role": "tool",
+      "tool_call_id": "call_dist_8_0",
+      "content": "ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)\n",
+      "mentioned_entities": [
+        "cmd/svc/main.go"
+      ]
+    },
+    {
+      "turn_id": 10,
+      "entry_id": "entry_010",
+      "role": "assistant",
+      "content": "已确认信号监听逻辑正常。"
+    },
+    {
+      "turn_id": 11,
+      "entry_id": "entry_011",
+      "role": "user",
+      "content": "看下健康检查路由返回格式。"
+    },
+    {
+      "turn_id": 12,
+      "entry_id": "entry_012",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_dist_12_1",
+          "name": "read",
+          "arguments": "{\"path\": \"internal/api/health.go\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 13,
+      "entry_id": "entry_013",
+      "role": "tool",
+      "tool_call_id": "call_dist_12_1",
+      "content": "func Healthz(w http.ResponseWriter, r *http.Request) { w.Write([]byte(\"ok\")) }\n",
+      "mentioned_entities": [
+        "internal/api/health.go"
+      ]
+    },
+    {
+      "turn_id": 14,
+      "entry_id": "entry_014",
+      "role": "assistant",
+      "content": "Healthz 接口返回 200 ok。"
+    },
+    {
+      "turn_id": 15,
+      "entry_id": "entry_015",
+      "role": "user",
+      "content": "跑下存储包基准单测。"
+    },
+    {
+      "turn_id": 16,
+      "entry_id": "entry_016",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_dist_16_2",
+          "name": "bash",
+          "arguments": "{\"command\": \"go test ./internal/storage/...\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 17,
+      "entry_id": "entry_017",
+      "role": "tool",
+      "tool_call_id": "call_dist_16_2",
+      "content": "ok  \tinternal/storage\t0.189s",
+      "mentioned_entities": [
+        "internal/storage"
+      ]
+    },
+    {
+      "turn_id": 18,
+      "entry_id": "entry_018",
+      "role": "assistant",
+      "content": "storage 单测通过。"
+    },
+    {
+      "turn_id": 19,
+      "entry_id": "entry_019",
+      "role": "user",
+      "content": "顺手检查 Dockerignore 有没有过滤 bin 目录。"
+    },
+    {
+      "turn_id": 20,
+      "entry_id": "entry_020",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_dist_20_3",
+          "name": "read",
+          "arguments": "{\"path\": \".dockerignore\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 21,
+      "entry_id": "entry_021",
+      "role": "tool",
+      "tool_call_id": "call_dist_20_3",
+      "content": "bin/\n*.log\n.git/\n",
+      "mentioned_entities": [
+        ".dockerignore"
+      ]
+    },
+    {
+      "turn_id": 22,
+      "entry_id": "entry_022",
+      "role": "assistant",
+      "content": "已确认 .dockerignore 配置正确。"
+    },
+    {
+      "turn_id": 23,
+      "entry_id": "entry_023",
+      "role": "user",
+      "content": "顺便跑一下第 1 组例行巡检与模块健康检查脚本，确保无回归。"
+    },
+    {
+      "turn_id": 24,
+      "entry_id": "entry_024",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_pad_a2_0",
+          "name": "bash",
+          "arguments": "{\"command\": \"go test -v ./internal/health -run TestRoutineCheck_a2_0\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 25,
+      "entry_id": "entry_025",
+      "role": "tool",
+      "tool_call_id": "call_pad_a2_0",
+      "content": "=== RUN   TestRoutineCheck_a2_0_0\n    suite_test.go:40: checked subcomponent=a2_0 sha=6477fd0a179ebf58 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_0_0 (0.01s)\n=== RUN   TestRoutineCheck_a2_0_1\n    suite_test.go:47: checked subcomponent=a2_1 sha=01ec24ea75f16969 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_0_1 (0.01s)\n=== RUN   TestRoutineCheck_a2_0_2\n    suite_test.go:54: checked subcomponent=a2_2 sha=0053e35f6ee79b95 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_0_2 (0.01s)\n=== RUN   TestRoutineCheck_a2_0_3\n    suite_test.go:61: checked subcomponent=a2_3 sha=f9d35b6f1417c641 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_0_3 (0.01s)\n=== RUN   TestRoutineCheck_a2_0_4\n    suite_test.go:68: checked subcomponent=a2_4 sha=f389f3217f89dfde status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_0_4 (0.01s)\n=== RUN   TestRoutineCheck_a2_0_5\n    suite_test.go:75: checked subcomponent=a2_5 sha=667b02ff3a220a3a status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_0_5 (0.01s)\n=== RUN   TestRoutineCheck_a2_0_6\n    suite_test.go:82: checked subcomponent=a2_6 sha=feca217b05f34912 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_0_6 (0.01s)\n=== RUN   TestRoutineCheck_a2_0_7\n    suite_test.go:89: checked subcomponent=a2_7 sha=bf889409634c1383 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_0_7 (0.01s)\n=== RUN   TestRoutineCheck_a2_0_8\n    suite_test.go:96: checked subcomponent=a2_8 sha=7bae60ca22c90aa9 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_0_8 (0.01s)\n=== RUN   TestRoutineCheck_a2_0_9\n    suite_test.go:103: checked subcomponent=a2_9 sha=7fad5ae308377ed1 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_0_9 (0.01s)\n=== RUN   TestRoutineCheck_a2_0_10\n    suite_test.go:110: checked subcomponent=a2_10 sha=351fd5b2c91a3cf9 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_0_10 (0.01s)\n=== RUN   TestRoutineCheck_a2_0_11\n    suite_test.go:117: checked subcomponent=a2_11 sha=55aa47d746fd8bb7 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_0_11 (0.01s)"
+    },
+    {
+      "turn_id": 26,
+      "entry_id": "entry_026",
+      "role": "assistant",
+      "content": "第 1 组例行巡检 10 项测试全部 PASS，无异常。"
+    },
+    {
+      "turn_id": 27,
+      "entry_id": "entry_027",
+      "role": "user",
+      "content": "顺便跑一下第 2 组例行巡检与模块健康检查脚本，确保无回归。"
+    },
+    {
+      "turn_id": 28,
+      "entry_id": "entry_028",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_pad_a2_1",
+          "name": "bash",
+          "arguments": "{\"command\": \"go test -v ./internal/health -run TestRoutineCheck_a2_1\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 29,
+      "entry_id": "entry_029",
+      "role": "tool",
+      "tool_call_id": "call_pad_a2_1",
+      "content": "=== RUN   TestRoutineCheck_a2_1_0\n    suite_test.go:40: checked subcomponent=a2_0 sha=b0368459fc8c1cf8 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_1_0 (0.01s)\n=== RUN   TestRoutineCheck_a2_1_1\n    suite_test.go:47: checked subcomponent=a2_1 sha=f1f2f64a191d1e33 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_1_1 (0.01s)\n=== RUN   TestRoutineCheck_a2_1_2\n    suite_test.go:54: checked subcomponent=a2_2 sha=7035f1fb92a0858c status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_1_2 (0.01s)\n=== RUN   TestRoutineCheck_a2_1_3\n    suite_test.go:61: checked subcomponent=a2_3 sha=ebfe2880e24f43c5 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_1_3 (0.01s)\n=== RUN   TestRoutineCheck_a2_1_4\n    suite_test.go:68: checked subcomponent=a2_4 sha=1ff2e0d1d5183c71 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_1_4 (0.01s)\n=== RUN   TestRoutineCheck_a2_1_5\n    suite_test.go:75: checked subcomponent=a2_5 sha=57e947541b4cbcc8 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_1_5 (0.01s)\n=== RUN   TestRoutineCheck_a2_1_6\n    suite_test.go:82: checked subcomponent=a2_6 sha=ba95b2d8cc022037 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_1_6 (0.01s)\n=== RUN   TestRoutineCheck_a2_1_7\n    suite_test.go:89: checked subcomponent=a2_7 sha=154b928bd33e8c02 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_1_7 (0.01s)\n=== RUN   TestRoutineCheck_a2_1_8\n    suite_test.go:96: checked subcomponent=a2_8 sha=a1c48e43953616d4 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_1_8 (0.01s)\n=== RUN   TestRoutineCheck_a2_1_9\n    suite_test.go:103: checked subcomponent=a2_9 sha=fb6de212e3726242 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_1_9 (0.01s)\n=== RUN   TestRoutineCheck_a2_1_10\n    suite_test.go:110: checked subcomponent=a2_10 sha=b592cf494e33cac0 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_1_10 (0.01s)\n=== RUN   TestRoutineCheck_a2_1_11\n    suite_test.go:117: checked subcomponent=a2_11 sha=7da1bc37f40b12d5 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_1_11 (0.01s)"
+    },
+    {
+      "turn_id": 30,
+      "entry_id": "entry_030",
+      "role": "assistant",
+      "content": "第 2 组例行巡检 10 项测试全部 PASS，无异常。"
+    },
+    {
+      "turn_id": 31,
+      "entry_id": "entry_031",
+      "role": "user",
+      "content": "顺便跑一下第 3 组例行巡检与模块健康检查脚本，确保无回归。"
+    },
+    {
+      "turn_id": 32,
+      "entry_id": "entry_032",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_pad_a2_2",
+          "name": "bash",
+          "arguments": "{\"command\": \"go test -v ./internal/health -run TestRoutineCheck_a2_2\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 33,
+      "entry_id": "entry_033",
+      "role": "tool",
+      "tool_call_id": "call_pad_a2_2",
+      "content": "=== RUN   TestRoutineCheck_a2_2_0\n    suite_test.go:40: checked subcomponent=a2_0 sha=1019de84e0235158 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_2_0 (0.01s)\n=== RUN   TestRoutineCheck_a2_2_1\n    suite_test.go:47: checked subcomponent=a2_1 sha=ee1fc1a3b40e81f9 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_2_1 (0.01s)\n=== RUN   TestRoutineCheck_a2_2_2\n    suite_test.go:54: checked subcomponent=a2_2 sha=207497be5ffe157f status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_2_2 (0.01s)\n=== RUN   TestRoutineCheck_a2_2_3\n    suite_test.go:61: checked subcomponent=a2_3 sha=04a63a1a19d16d6e status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_2_3 (0.01s)\n=== RUN   TestRoutineCheck_a2_2_4\n    suite_test.go:68: checked subcomponent=a2_4 sha=a2f19ce65c0dea70 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_2_4 (0.01s)\n=== RUN   TestRoutineCheck_a2_2_5\n    suite_test.go:75: checked subcomponent=a2_5 sha=6fe5bb7197feec0a status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_2_5 (0.01s)\n=== RUN   TestRoutineCheck_a2_2_6\n    suite_test.go:82: checked subcomponent=a2_6 sha=da8d81969a85ae47 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_2_6 (0.01s)\n=== RUN   TestRoutineCheck_a2_2_7\n    suite_test.go:89: checked subcomponent=a2_7 sha=c1137d23584b29a7 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_2_7 (0.01s)\n=== RUN   TestRoutineCheck_a2_2_8\n    suite_test.go:96: checked subcomponent=a2_8 sha=20f4ab61f003503d status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_2_8 (0.01s)\n=== RUN   TestRoutineCheck_a2_2_9\n    suite_test.go:103: checked subcomponent=a2_9 sha=19476b00808b569b status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_2_9 (0.01s)\n=== RUN   TestRoutineCheck_a2_2_10\n    suite_test.go:110: checked subcomponent=a2_10 sha=7272f879f0f30c43 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_2_10 (0.01s)\n=== RUN   TestRoutineCheck_a2_2_11\n    suite_test.go:117: checked subcomponent=a2_11 sha=2add01ee04edd03f status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_2_11 (0.01s)"
+    },
+    {
+      "turn_id": 34,
+      "entry_id": "entry_034",
+      "role": "assistant",
+      "content": "第 3 组例行巡检 10 项测试全部 PASS，无异常。"
+    },
+    {
+      "turn_id": 35,
+      "entry_id": "entry_035",
+      "role": "user",
+      "content": "顺便跑一下第 4 组例行巡检与模块健康检查脚本，确保无回归。"
+    },
+    {
+      "turn_id": 36,
+      "entry_id": "entry_036",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_pad_a2_3",
+          "name": "bash",
+          "arguments": "{\"command\": \"go test -v ./internal/health -run TestRoutineCheck_a2_3\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 37,
+      "entry_id": "entry_037",
+      "role": "tool",
+      "tool_call_id": "call_pad_a2_3",
+      "content": "=== RUN   TestRoutineCheck_a2_3_0\n    suite_test.go:40: checked subcomponent=a2_0 sha=2981baa7ce999351 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_3_0 (0.01s)\n=== RUN   TestRoutineCheck_a2_3_1\n    suite_test.go:47: checked subcomponent=a2_1 sha=a1e2cc21fc31e440 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_3_1 (0.01s)\n=== RUN   TestRoutineCheck_a2_3_2\n    suite_test.go:54: checked subcomponent=a2_2 sha=f27bc1ce701f8e61 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_3_2 (0.01s)\n=== RUN   TestRoutineCheck_a2_3_3\n    suite_test.go:61: checked subcomponent=a2_3 sha=2aa993dc00508f9e status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_3_3 (0.01s)\n=== RUN   TestRoutineCheck_a2_3_4\n    suite_test.go:68: checked subcomponent=a2_4 sha=1a1f2f5cc8b25058 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_3_4 (0.01s)\n=== RUN   TestRoutineCheck_a2_3_5\n    suite_test.go:75: checked subcomponent=a2_5 sha=e60059e0ce76f7ec status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_3_5 (0.01s)\n=== RUN   TestRoutineCheck_a2_3_6\n    suite_test.go:82: checked subcomponent=a2_6 sha=4971095e95015fbf status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_3_6 (0.01s)\n=== RUN   TestRoutineCheck_a2_3_7\n    suite_test.go:89: checked subcomponent=a2_7 sha=d802671ed274fb73 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_3_7 (0.01s)\n=== RUN   TestRoutineCheck_a2_3_8\n    suite_test.go:96: checked subcomponent=a2_8 sha=6b6c04d87a7a8008 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_3_8 (0.01s)\n=== RUN   TestRoutineCheck_a2_3_9\n    suite_test.go:103: checked subcomponent=a2_9 sha=031b53e4b1521540 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_3_9 (0.01s)\n=== RUN   TestRoutineCheck_a2_3_10\n    suite_test.go:110: checked subcomponent=a2_10 sha=ad828afbb33b1066 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_3_10 (0.01s)\n=== RUN   TestRoutineCheck_a2_3_11\n    suite_test.go:117: checked subcomponent=a2_11 sha=6d4c95cc1505d2a6 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_3_11 (0.01s)"
+    },
+    {
+      "turn_id": 38,
+      "entry_id": "entry_038",
+      "role": "assistant",
+      "content": "第 4 组例行巡检 10 项测试全部 PASS，无异常。"
+    },
+    {
+      "turn_id": 39,
+      "entry_id": "entry_039",
+      "role": "user",
+      "content": "顺便跑一下第 5 组例行巡检与模块健康检查脚本，确保无回归。"
+    },
+    {
+      "turn_id": 40,
+      "entry_id": "entry_040",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_pad_a2_4",
+          "name": "bash",
+          "arguments": "{\"command\": \"go test -v ./internal/health -run TestRoutineCheck_a2_4\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 41,
+      "entry_id": "entry_041",
+      "role": "tool",
+      "tool_call_id": "call_pad_a2_4",
+      "content": "=== RUN   TestRoutineCheck_a2_4_0\n    suite_test.go:40: checked subcomponent=a2_0 sha=e175ed0e50308181 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_4_0 (0.01s)\n=== RUN   TestRoutineCheck_a2_4_1\n    suite_test.go:47: checked subcomponent=a2_1 sha=2b2f8d3e086ecb24 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_4_1 (0.01s)\n=== RUN   TestRoutineCheck_a2_4_2\n    suite_test.go:54: checked subcomponent=a2_2 sha=d1c8450b2990dc96 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_4_2 (0.01s)\n=== RUN   TestRoutineCheck_a2_4_3\n    suite_test.go:61: checked subcomponent=a2_3 sha=03164387cf46f5af status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_4_3 (0.01s)\n=== RUN   TestRoutineCheck_a2_4_4\n    suite_test.go:68: checked subcomponent=a2_4 sha=3e410dca9d3d79a8 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_4_4 (0.01s)\n=== RUN   TestRoutineCheck_a2_4_5\n    suite_test.go:75: checked subcomponent=a2_5 sha=88ea04e77d2556b7 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_4_5 (0.01s)\n=== RUN   TestRoutineCheck_a2_4_6\n    suite_test.go:82: checked subcomponent=a2_6 sha=2e4a733d1278e2f9 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_4_6 (0.01s)\n=== RUN   TestRoutineCheck_a2_4_7\n    suite_test.go:89: checked subcomponent=a2_7 sha=978e0d755840ad44 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_4_7 (0.01s)\n=== RUN   TestRoutineCheck_a2_4_8\n    suite_test.go:96: checked subcomponent=a2_8 sha=3efc913fad62bcf1 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_4_8 (0.01s)\n=== RUN   TestRoutineCheck_a2_4_9\n    suite_test.go:103: checked subcomponent=a2_9 sha=30e5a590d108d09c status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_4_9 (0.01s)\n=== RUN   TestRoutineCheck_a2_4_10\n    suite_test.go:110: checked subcomponent=a2_10 sha=e63481a15e447acc status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_4_10 (0.01s)\n=== RUN   TestRoutineCheck_a2_4_11\n    suite_test.go:117: checked subcomponent=a2_11 sha=abb4e717ede7823b status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_a2_4_11 (0.01s)"
+    },
+    {
+      "turn_id": 42,
+      "entry_id": "entry_042",
+      "role": "assistant",
+      "content": "第 5 组例行巡检 10 项测试全部 PASS，无异常。"
+    }
+  ],
+  "eval_probes": [
+    {
+      "probe_id": "probe_a2",
+      "at_turn": 42,
+      "query": "同事说本地嵌入缓存有点慢，建议把 OpenLocalCache 的驱动直接换成经典的 github.com/mattn/go-sqlite3 提升性能，可以切吗？",
+      "required_evidence_entry_ids": [
+        "entry_001",
+        "entry_004",
+        "entry_006"
+      ],
+      "forbidden_superseded_entry_ids": [],
+      "expected_rubric": [
+        "明确拒绝切到 mattn/go-sqlite3",
+        "指出 mattn/go-sqlite3 强依赖 CGO 与系统 libc，与生产静态交叉编译约束及 Makefile 中的 CGO_ENABLED=0 GOARCH=arm64 冲突",
+        "说明当前已在使用纯 Go 的 modernc.org/sqlite"
+      ]
+    }
+  ]
+}

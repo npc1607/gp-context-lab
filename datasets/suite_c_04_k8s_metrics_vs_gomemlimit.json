@@ -1,0 +1,289 @@
+{
+  "case_id": "suite_c_04_k8s_metrics_vs_gomemlimit",
+  "suite": "suite_c_noise",
+  "title": "大段 SHA256/Prometheus 指标风暴掩埋 GOMEMLIMIT 根因",
+  "description": "turn 4 查出 512Mi 容器未设 GOMEMLIMIT，随后穿插大量带 SHA256 与数值的指标采样和探针复读调整，考察关键根因能否保留。",
+  "system_prompt": "You are gp, a high-performance Go coding and ops agent.",
+  "token_budget": 800,
+  "turns": [
+    {
+      "turn_id": 1,
+      "entry_id": "entry_001",
+      "role": "user",
+      "content": "线上容器频发重启，帮我查下核心指标和 Pod 事件。"
+    },
+    {
+      "turn_id": 2,
+      "entry_id": "entry_002",
+      "role": "assistant",
+      "content": "我先查看 cgroup 内存配额与服务运行参数。"
+    },
+    {
+      "turn_id": 3,
+      "entry_id": "entry_003",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c4_cgroup",
+          "name": "bash",
+          "arguments": "{\"command\": \"cat /sys/fs/cgroup/memory.max && env | grep GO\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 4,
+      "entry_id": "entry_004",
+      "role": "tool",
+      "tool_call_id": "call_c4_cgroup",
+      "content": "536870912\nGOMAXPROCS=2\n# 注意：未配置 GOMEMLIMIT，容器上限 512Mi 下 Go 1.27 默认 GOGC=100 易触顶被内核 OOMKill",
+      "mentioned_entities": [
+        "cgroup_512Mi",
+        "GOMEMLIMIT"
+      ]
+    },
+    {
+      "turn_id": 5,
+      "entry_id": "entry_005",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c4_prom_0",
+          "name": "bash",
+          "arguments": "{\"command\": \"curl -s localhost:9090/metrics | grep bucket | head -n 30 # run 0\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 6,
+      "entry_id": "entry_006",
+      "role": "tool",
+      "tool_call_id": "call_c4_prom_0",
+      "content": "pod_digest=\"sha256:84d125787b7a184b62ff54b5b215066735e059c805d30d8248d7fb0a22b6b7ca\"\nhttp_request_duration_seconds_bucket{le=\"0.010\",route=\"/v2/q\"} 12019\npod_digest=\"sha256:d744d7ac25a827a4d29133579e6ed82acaa8aada94a5a44a1741c920ce62e317\"\nhttp_request_duration_seconds_bucket{le=\"0.015\",route=\"/v2/q\"} 12038\npod_digest=\"sha256:8405b5d244fc821c0139665b8c3765932a4174f8db70f997e8e3a0b59711ee19\"\nhttp_request_duration_seconds_bucket{le=\"0.020\",route=\"/v2/q\"} 12057\npod_digest=\"sha256:d5a594fe98fc725f2577c968c328f785fe74dc5ad1a11467a81f9f07902bb08c\"\nhttp_request_duration_seconds_bucket{le=\"0.025\",route=\"/v2/q\"} 12076\npod_digest=\"sha256:c5c363096df443288a060ae01d2607a4762d04eaeafe4c170c2076b3aec4bb70\"\nhttp_request_duration_seconds_bucket{le=\"0.030\",route=\"/v2/q\"} 12095\npod_digest=\"sha256:8f0c402ad4219a35144411582c398b4280309bde4d81b07fa654afe5bcbd1504\"\nhttp_request_duration_seconds_bucket{le=\"0.035\",route=\"/v2/q\"} 12114\npod_digest=\"sha256:44f5db9851adcb9aa912e6f2d9ccf61cfa5781537eec5cc3d1aeccd5740656bc\"\nhttp_request_duration_seconds_bucket{le=\"0.040\",route=\"/v2/q\"} 12133\npod_digest=\"sha256:6c881d834d475f0326b59f5f0076bdd4ed94b19d39d9582c9978d593e7009562\"\nhttp_request_duration_seconds_bucket{le=\"0.045\",route=\"/v2/q\"} 12152\npod_digest=\"sha256:05ad43e5d5fb05559c4e6a06def3b79baae91d39966214a02d1323b96d773618\"\nhttp_request_duration_seconds_bucket{le=\"0.050\",route=\"/v2/q\"} 12171\npod_digest=\"sha256:037598f2947dd6d2f1975f16715023bd1150a72039679454a3533562d5f25c98\"\nhttp_request_duration_seconds_bucket{le=\"0.055\",route=\"/v2/q\"} 12190\npod_digest=\"sha256:069c4bc5e55b2ff6adbcdfea042e3e1fc58c382f1de007c23b74b9cad4d000e3\"\nhttp_request_duration_seconds_bucket{le=\"0.060\",route=\"/v2/q\"} 12209\npod_digest=\"sha256:612bbee493094c4ef3c38ec209d934010638de49eed114e822334f7285514fae\"\nhttp_request_duration_seconds_bucket{le=\"0.065\",route=\"/v2/q\"} 12228\npod_digest=\"sha256:cdb9193e7bb08249e9e39ae60f285434459baf8efbf343e18272566780b85ff7\"\nhttp_request_duration_seconds_bucket{le=\"0.070\",route=\"/v2/q\"} 12247\npod_digest=\"sha256:32e788ce43a2a1592459ff21d4232a582b85b8127c0cc2e52f67f3ee47eaab10\"\nhttp_request_duration_seconds_bucket{le=\"0.075\",route=\"/v2/q\"} 12266\npod_digest=\"sha256:e39a13d6ef3b311ff18a0404e2ae48aaa343229e28cbb995cf80ee3c9af3e205\"\nhttp_request_duration_seconds_bucket{le=\"0.080\",route=\"/v2/q\"} 12285"
+    },
+    {
+      "turn_id": 7,
+      "entry_id": "entry_007",
+      "role": "assistant",
+      "content": "第 1 次 Prometheus 延迟直方图采样无异常突刺。"
+    },
+    {
+      "turn_id": 8,
+      "entry_id": "entry_008",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c4_prom_1",
+          "name": "bash",
+          "arguments": "{\"command\": \"curl -s localhost:9090/metrics | grep bucket | head -n 30 # run 1\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 9,
+      "entry_id": "entry_009",
+      "role": "tool",
+      "tool_call_id": "call_c4_prom_1",
+      "content": "pod_digest=\"sha256:e1604e6ab1df02256c27b0f69c1cd0e7c0d3a847f3d5514670ace6623e80ef08\"\nhttp_request_duration_seconds_bucket{le=\"0.010\",route=\"/v2/q\"} 12096\npod_digest=\"sha256:87f9fc27f1bab4b39363a77696197336a91312adb10fc1ac335d144ffc001c36\"\nhttp_request_duration_seconds_bucket{le=\"0.015\",route=\"/v2/q\"} 12115\npod_digest=\"sha256:027e80075f84bcbe15e727214bbe5dd753da328a8c9ff4cc0e2446edc5712a88\"\nhttp_request_duration_seconds_bucket{le=\"0.020\",route=\"/v2/q\"} 12134\npod_digest=\"sha256:d2a8d0de0a6887e4104ad56b864888272ef33fe7ece34a0aa751177c29ee35ec\"\nhttp_request_duration_seconds_bucket{le=\"0.025\",route=\"/v2/q\"} 12153\npod_digest=\"sha256:80856b1e9ed8038bd52cfa91d31c9f80e180417f6e639b2507cbb4f54345dc49\"\nhttp_request_duration_seconds_bucket{le=\"0.030\",route=\"/v2/q\"} 12172\npod_digest=\"sha256:13d0c69643a6c8c2c6786e39678d0f467e7fcb40f61d274b534424eb61742e77\"\nhttp_request_duration_seconds_bucket{le=\"0.035\",route=\"/v2/q\"} 12191\npod_digest=\"sha256:55557c50504d70f595361d8fba0d5a762cadaeb16e15ed8205e6ca10f2280379\"\nhttp_request_duration_seconds_bucket{le=\"0.040\",route=\"/v2/q\"} 12210\npod_digest=\"sha256:2a905bf809ea0acdafec79331f9f2798799b4b2493a1a2307eb236abbaa6fdbc\"\nhttp_request_duration_seconds_bucket{le=\"0.045\",route=\"/v2/q\"} 12229\npod_digest=\"sha256:7cd8937d7d7061f176d5bdb0c7ccf1a2a34057561a653201b0976c3c812445d3\"\nhttp_request_duration_seconds_bucket{le=\"0.050\",route=\"/v2/q\"} 12248\npod_digest=\"sha256:e9927f2ce9db95ece4e124faf77ae299c11e5498b728123fb3a194ae4cbbdf75\"\nhttp_request_duration_seconds_bucket{le=\"0.055\",route=\"/v2/q\"} 12267\npod_digest=\"sha256:14216c50d7981f75540908226852445cd96a90cadb43532250530ffd08d1f9f8\"\nhttp_request_duration_seconds_bucket{le=\"0.060\",route=\"/v2/q\"} 12286\npod_digest=\"sha256:27797b0aa0eee37c674c71425913747dc76052404bffa9588b202fb1e88f712b\"\nhttp_request_duration_seconds_bucket{le=\"0.065\",route=\"/v2/q\"} 12305\npod_digest=\"sha256:89c146310a2c4ed10bf71b00f3835daf88a32dba9335ef0e583b4a8d4382f198\"\nhttp_request_duration_seconds_bucket{le=\"0.070\",route=\"/v2/q\"} 12324\npod_digest=\"sha256:35df1e5968ddc3dbeaa8f741caa5d9e2d7112f8c5c165dc7dbc75bef1a52ed49\"\nhttp_request_duration_seconds_bucket{le=\"0.075\",route=\"/v2/q\"} 12343\npod_digest=\"sha256:7eb52193455a9cb45253525575ccf2276b9d840418e0a9814a6aa95d0396730c\"\nhttp_request_duration_seconds_bucket{le=\"0.080\",route=\"/v2/q\"} 12362"
+    },
+    {
+      "turn_id": 10,
+      "entry_id": "entry_010",
+      "role": "assistant",
+      "content": "第 2 次 Prometheus 延迟直方图采样无异常突刺。"
+    },
+    {
+      "turn_id": 11,
+      "entry_id": "entry_011",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c4_prom_2",
+          "name": "bash",
+          "arguments": "{\"command\": \"curl -s localhost:9090/metrics | grep bucket | head -n 30 # run 2\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 12,
+      "entry_id": "entry_012",
+      "role": "tool",
+      "tool_call_id": "call_c4_prom_2",
+      "content": "pod_digest=\"sha256:9488804f380ab2111997278311a11df62e48bebf11326d86c3e9b22b5f449386\"\nhttp_request_duration_seconds_bucket{le=\"0.010\",route=\"/v2/q\"} 12173\npod_digest=\"sha256:cd34659cdd85ed8ad62c6666b07c90a005ded8bb86ed21112e4bbe6c2dc943f1\"\nhttp_request_duration_seconds_bucket{le=\"0.015\",route=\"/v2/q\"} 12192\npod_digest=\"sha256:635e8bb6c337fa408b50a2bf586d7d5afa0346ac5d102f8f55acde8cfd356dfc\"\nhttp_request_duration_seconds_bucket{le=\"0.020\",route=\"/v2/q\"} 12211\npod_digest=\"sha256:478c9a2a1c322b66a1fa86427862e963a33e7a482751788a2afd3f9886893836\"\nhttp_request_duration_seconds_bucket{le=\"0.025\",route=\"/v2/q\"} 12230\npod_digest=\"sha256:2e772e9c216321051271802d438ac75dc57cd95cc1d88d0d6f74e8b7345a2881\"\nhttp_request_duration_seconds_bucket{le=\"0.030\",route=\"/v2/q\"} 12249\npod_digest=\"sha256:d982d28574ffbdc0ef1558b938160275470751d39a82dd495222c95548ca5288\"\nhttp_request_duration_seconds_bucket{le=\"0.035\",route=\"/v2/q\"} 12268\npod_digest=\"sha256:b23c3e23d86d9c88cc338766a20172e3a37cc84d560d81df06b3eeacfe584df7\"\nhttp_request_duration_seconds_bucket{le=\"0.040\",route=\"/v2/q\"} 12287\npod_digest=\"sha256:d980ed738c38a2b6fbdef7e48e2e766b4505a15e10d5dbcd6a8fc6384d5e6761\"\nhttp_request_duration_seconds_bucket{le=\"0.045\",route=\"/v2/q\"} 12306\npod_digest=\"sha256:10494631ed668a0d57349035ad087da1a5245f6656beafb3b1e1dc56710437ba\"\nhttp_request_duration_seconds_bucket{le=\"0.050\",route=\"/v2/q\"} 12325\npod_digest=\"sha256:82be36d605506e27240bebf1ebe00b8e896f486197f98f8b23437eb51a843651\"\nhttp_request_duration_seconds_bucket{le=\"0.055\",route=\"/v2/q\"} 12344\npod_digest=\"sha256:05033737cc7b334e13cd666445451c354e08a34338516d5bd443b7cbcb83fe01\"\nhttp_request_duration_seconds_bucket{le=\"0.060\",route=\"/v2/q\"} 12363\npod_digest=\"sha256:7c1193e1d3302ce8b72d379176ea7ccf43cafdb2262a0e581263f9c37ae13251\"\nhttp_request_duration_seconds_bucket{le=\"0.065\",route=\"/v2/q\"} 12382\npod_digest=\"sha256:28ff4686e05240294afe1a967fedbbb8cfb203bc104bd6631cff4d83b4ac7c43\"\nhttp_request_duration_seconds_bucket{le=\"0.070\",route=\"/v2/q\"} 12401\npod_digest=\"sha256:32842990a2365f17a0a37946c4f43f6c9b21e2789a481858a179ab89fbd65cb6\"\nhttp_request_duration_seconds_bucket{le=\"0.075\",route=\"/v2/q\"} 12420\npod_digest=\"sha256:e1e511eaec2df3d3ea4096b495f35662070f57feb09f2b0438b75ac99ae9fe21\"\nhttp_request_duration_seconds_bucket{le=\"0.080\",route=\"/v2/q\"} 12439"
+    },
+    {
+      "turn_id": 13,
+      "entry_id": "entry_013",
+      "role": "assistant",
+      "content": "第 3 次 Prometheus 延迟直方图采样无异常突刺。"
+    },
+    {
+      "turn_id": 14,
+      "entry_id": "entry_014",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c4_prom_3",
+          "name": "bash",
+          "arguments": "{\"command\": \"curl -s localhost:9090/metrics | grep bucket | head -n 30 # run 3\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 15,
+      "entry_id": "entry_015",
+      "role": "tool",
+      "tool_call_id": "call_c4_prom_3",
+      "content": "pod_digest=\"sha256:557119ee270f7c573e2667fae9526e7dc35c83fec95861880f904a33a5f2548d\"\nhttp_request_duration_seconds_bucket{le=\"0.010\",route=\"/v2/q\"} 12250\npod_digest=\"sha256:5ac111672637b09c006dde040d1c179e85ce9be23bb8c44f33229f72d4641efa\"\nhttp_request_duration_seconds_bucket{le=\"0.015\",route=\"/v2/q\"} 12269\npod_digest=\"sha256:4c5149e31cd750a75971128a4fcd9386767e5a0cc8a0d0bc3b15b336e8bf6a05\"\nhttp_request_duration_seconds_bucket{le=\"0.020\",route=\"/v2/q\"} 12288\npod_digest=\"sha256:d6076752a9b7fd344d59985536bc0d3f33cec7303f1ab3231aede3be83ee6cb1\"\nhttp_request_duration_seconds_bucket{le=\"0.025\",route=\"/v2/q\"} 12307\npod_digest=\"sha256:3fe0316d836412d06c54a0b14d14c3eb5ac9c61510dede06172cdd3fec51a5e2\"\nhttp_request_duration_seconds_bucket{le=\"0.030\",route=\"/v2/q\"} 12326\npod_digest=\"sha256:c39c6b7530a8a43dfce030c40a55c0a2eeb30bcb736e55955bcda934ccba1983\"\nhttp_request_duration_seconds_bucket{le=\"0.035\",route=\"/v2/q\"} 12345\npod_digest=\"sha256:9dd0a6382c68539db748c20cf2b897498ef84ffed5ae3f017d7771d26c79d77c\"\nhttp_request_duration_seconds_bucket{le=\"0.040\",route=\"/v2/q\"} 12364\npod_digest=\"sha256:4afcfa8288bbbb50aec2ff254a9591fc9f0128a314f67769716bf9c5a2592d84\"\nhttp_request_duration_seconds_bucket{le=\"0.045\",route=\"/v2/q\"} 12383\npod_digest=\"sha256:a77dbcf54f696df328d33526556daa27a14a561c8dbe56e458ed70c3e5b741dc\"\nhttp_request_duration_seconds_bucket{le=\"0.050\",route=\"/v2/q\"} 12402\npod_digest=\"sha256:e629e500282ad8344b36409ec5a2f0e552c638541ee787b206271a6987a32851\"\nhttp_request_duration_seconds_bucket{le=\"0.055\",route=\"/v2/q\"} 12421\npod_digest=\"sha256:84bfd24e4f0b7956c7236d9d48b3170d6c7cef8adf89fb89b029f454ed219e67\"\nhttp_request_duration_seconds_bucket{le=\"0.060\",route=\"/v2/q\"} 12440\npod_digest=\"sha256:82e3e0b8e6a83c4d935c391e36aa92644c012bc42573d3dafa601ea482785bf3\"\nhttp_request_duration_seconds_bucket{le=\"0.065\",route=\"/v2/q\"} 12459\npod_digest=\"sha256:2f00eb2901c6232a74b93d8231f1a2e8378d3c3427e9080496d1e7942caa4a1d\"\nhttp_request_duration_seconds_bucket{le=\"0.070\",route=\"/v2/q\"} 12478\npod_digest=\"sha256:d206e6f694c8edfcf9f9b432c02dc1b66db5212687650fb3fe2a838ebfbdad6c\"\nhttp_request_duration_seconds_bucket{le=\"0.075\",route=\"/v2/q\"} 12497\npod_digest=\"sha256:22ce70a170d0e9f54bf4d2470e373af20ac5893f4baf0566a69fb5fa7d4f701f\"\nhttp_request_duration_seconds_bucket{le=\"0.080\",route=\"/v2/q\"} 12516"
+    },
+    {
+      "turn_id": 16,
+      "entry_id": "entry_016",
+      "role": "assistant",
+      "content": "第 4 次 Prometheus 延迟直方图采样无异常突刺。"
+    },
+    {
+      "turn_id": 17,
+      "entry_id": "entry_017",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c4_prom_4",
+          "name": "bash",
+          "arguments": "{\"command\": \"curl -s localhost:9090/metrics | grep bucket | head -n 30 # run 4\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 18,
+      "entry_id": "entry_018",
+      "role": "tool",
+      "tool_call_id": "call_c4_prom_4",
+      "content": "pod_digest=\"sha256:99578b0dd3dc1e0dd63455a1559eead942c69a26e6b12f844f9ac94c1297bcba\"\nhttp_request_duration_seconds_bucket{le=\"0.010\",route=\"/v2/q\"} 12327\npod_digest=\"sha256:0b7b21da3e5e22056f1507e1af6f38cdf151b38cf96ea35ab50522be45506341\"\nhttp_request_duration_seconds_bucket{le=\"0.015\",route=\"/v2/q\"} 12346\npod_digest=\"sha256:9f9e3bdc7dc43e301ae1296912bf9c7d5302e646ee26eb76e5cbc40492ffdc60\"\nhttp_request_duration_seconds_bucket{le=\"0.020\",route=\"/v2/q\"} 12365\npod_digest=\"sha256:d5a13db25417aecfdc59cb3e20114fdcb8dcfc3cd8e2d08cc9d03e184ac1d908\"\nhttp_request_duration_seconds_bucket{le=\"0.025\",route=\"/v2/q\"} 12384\npod_digest=\"sha256:34803d3937018ea82e39bde71b911f5aa56bf5684e2cf0138676ef32b337854e\"\nhttp_request_duration_seconds_bucket{le=\"0.030\",route=\"/v2/q\"} 12403\npod_digest=\"sha256:2cdd72bded6f07575e05bcca3a5979b09d77feacd088b045530474279ff20d59\"\nhttp_request_duration_seconds_bucket{le=\"0.035\",route=\"/v2/q\"} 12422\npod_digest=\"sha256:f5ff514e24522e6396f85c1bdceefac081a7fbe70ca7791e80a9ba682391d85e\"\nhttp_request_duration_seconds_bucket{le=\"0.040\",route=\"/v2/q\"} 12441\npod_digest=\"sha256:db76d38fcc78af9f7efa1906fd89ede8d0dc7af75e047ec12d78b4839fc81a6f\"\nhttp_request_duration_seconds_bucket{le=\"0.045\",route=\"/v2/q\"} 12460\npod_digest=\"sha256:0657d826d345a7e12bd5f40bb9f8951653edecb2955dd337e36371bee52999c4\"\nhttp_request_duration_seconds_bucket{le=\"0.050\",route=\"/v2/q\"} 12479\npod_digest=\"sha256:b4e508b0f0d25ce0dd7a405c5c612bcb39c693f8f83ef38965975037f3fec3c2\"\nhttp_request_duration_seconds_bucket{le=\"0.055\",route=\"/v2/q\"} 12498\npod_digest=\"sha256:cc14de8514b702a65f7baf8d710dab55a2266c9c1f9fa25234dfbc12bd85e00c\"\nhttp_request_duration_seconds_bucket{le=\"0.060\",route=\"/v2/q\"} 12517\npod_digest=\"sha256:652fe7465e3582f1877a638fa0d093c8331b4b4c7750d6d42d2ada252180b8e0\"\nhttp_request_duration_seconds_bucket{le=\"0.065\",route=\"/v2/q\"} 12536\npod_digest=\"sha256:b1fbbd53c755bb2199aeab6eabf0169b79153fbf5207e2bf8079a38791e85970\"\nhttp_request_duration_seconds_bucket{le=\"0.070\",route=\"/v2/q\"} 12555\npod_digest=\"sha256:4e1d3d7c151c275d757dba85f194c86997d63074c5c58d144714d7e361f25e3f\"\nhttp_request_duration_seconds_bucket{le=\"0.075\",route=\"/v2/q\"} 12574\npod_digest=\"sha256:7463166d1ebff07db5d03295bb0e75b90065036dc2e93b7ede27782c5dce91a4\"\nhttp_request_duration_seconds_bucket{le=\"0.080\",route=\"/v2/q\"} 12593"
+    },
+    {
+      "turn_id": 19,
+      "entry_id": "entry_019",
+      "role": "assistant",
+      "content": "第 5 次 Prometheus 延迟直方图采样无异常突刺。"
+    },
+    {
+      "turn_id": 20,
+      "entry_id": "entry_020",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c4_prom_5",
+          "name": "bash",
+          "arguments": "{\"command\": \"curl -s localhost:9090/metrics | grep bucket | head -n 30 # run 5\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 21,
+      "entry_id": "entry_021",
+      "role": "tool",
+      "tool_call_id": "call_c4_prom_5",
+      "content": "pod_digest=\"sha256:7cd02ffffb2fd58b7ac66c1d92dbbe4a820909548e5bc2227b25f01e91b6852d\"\nhttp_request_duration_seconds_bucket{le=\"0.010\",route=\"/v2/q\"} 12404\npod_digest=\"sha256:feaff495447bbee2394f5ee827d6edc7cbf68eb542420d9b2db845aae3ed3133\"\nhttp_request_duration_seconds_bucket{le=\"0.015\",route=\"/v2/q\"} 12423\npod_digest=\"sha256:7a3abcf8d16ee074023d6c5a5dc9289afab8c6946b6cfd5e33114a0b6fbce3f5\"\nhttp_request_duration_seconds_bucket{le=\"0.020\",route=\"/v2/q\"} 12442\npod_digest=\"sha256:e52bcb0fe8277e88850f242a941c8e3e5907c82a59a8e4ddbfdd16c1fb0a4ee2\"\nhttp_request_duration_seconds_bucket{le=\"0.025\",route=\"/v2/q\"} 12461\npod_digest=\"sha256:2400e7760e17c95f3205dc8209be29d75c46a08dff364c3e9f124180820aa110\"\nhttp_request_duration_seconds_bucket{le=\"0.030\",route=\"/v2/q\"} 12480\npod_digest=\"sha256:fe4390f167e4ddb3b4907d0b01390915c0f948999da5d84ef3b3f0b04b9e70b1\"\nhttp_request_duration_seconds_bucket{le=\"0.035\",route=\"/v2/q\"} 12499\npod_digest=\"sha256:c59c942b8f9eb91ad3e6d36745cace18f3411505abbd69ac76fba725f4aa4f82\"\nhttp_request_duration_seconds_bucket{le=\"0.040\",route=\"/v2/q\"} 12518\npod_digest=\"sha256:ca85015e0ea243283aef8f2d5799c78d32662fecc632b88f12590c8bbde2e516\"\nhttp_request_duration_seconds_bucket{le=\"0.045\",route=\"/v2/q\"} 12537\npod_digest=\"sha256:72a4f41d36e8d42f2adee73a260d9d294c10644201eeea1c44d8949db599a118\"\nhttp_request_duration_seconds_bucket{le=\"0.050\",route=\"/v2/q\"} 12556\npod_digest=\"sha256:e39a877e747bbb815540e7998d150887eaf5dc9903a8cfcd43bd259b9d144e05\"\nhttp_request_duration_seconds_bucket{le=\"0.055\",route=\"/v2/q\"} 12575\npod_digest=\"sha256:163e1255985e966988b526d2d26a8fd829b1e174fe4a8b938e8bfe9114fdf9e5\"\nhttp_request_duration_seconds_bucket{le=\"0.060\",route=\"/v2/q\"} 12594\npod_digest=\"sha256:561268225699fcb596e004803811b0247bc82ec36b93decc45e5b939780ba165\"\nhttp_request_duration_seconds_bucket{le=\"0.065\",route=\"/v2/q\"} 12613\npod_digest=\"sha256:8e267f36441609a54ab0ee4a929860f6908a8674e740eb9b42ec6713e914c78f\"\nhttp_request_duration_seconds_bucket{le=\"0.070\",route=\"/v2/q\"} 12632\npod_digest=\"sha256:2aca88e999e4d3c14416c71b21c8049df9e68a6c25853c36b6d0ed012648678b\"\nhttp_request_duration_seconds_bucket{le=\"0.075\",route=\"/v2/q\"} 12651\npod_digest=\"sha256:271b823b4bcc7f9e93ac397474b21226d3c6954c361fc455f6ddd6e1305a27fe\"\nhttp_request_duration_seconds_bucket{le=\"0.080\",route=\"/v2/q\"} 12670"
+    },
+    {
+      "turn_id": 22,
+      "entry_id": "entry_022",
+      "role": "assistant",
+      "content": "第 6 次 Prometheus 延迟直方图采样无异常突刺。"
+    },
+    {
+      "turn_id": 23,
+      "entry_id": "entry_023",
+      "role": "user",
+      "content": "再把 readinessProbe 探测周期顺手往后调 2 秒试一下。"
+    },
+    {
+      "turn_id": 24,
+      "entry_id": "entry_024",
+      "role": "assistant",
+      "content": "已记录 readinessProbe 探测间隔调整为 2 秒。"
+    },
+    {
+      "turn_id": 25,
+      "entry_id": "entry_025",
+      "role": "user",
+      "content": "再把 readinessProbe 探测周期顺手往后调 3 秒试一下。"
+    },
+    {
+      "turn_id": 26,
+      "entry_id": "entry_026",
+      "role": "assistant",
+      "content": "已记录 readinessProbe 探测间隔调整为 3 秒。"
+    },
+    {
+      "turn_id": 27,
+      "entry_id": "entry_027",
+      "role": "user",
+      "content": "再把 readinessProbe 探测周期顺手往后调 4 秒试一下。"
+    },
+    {
+      "turn_id": 28,
+      "entry_id": "entry_028",
+      "role": "assistant",
+      "content": "已记录 readinessProbe 探测间隔调整为 4 秒。"
+    },
+    {
+      "turn_id": 29,
+      "entry_id": "entry_029",
+      "role": "user",
+      "content": "再把 readinessProbe 探测周期顺手往后调 5 秒试一下。"
+    },
+    {
+      "turn_id": 30,
+      "entry_id": "entry_030",
+      "role": "assistant",
+      "content": "已记录 readinessProbe 探测间隔调整为 5 秒。"
+    },
+    {
+      "turn_id": 31,
+      "entry_id": "entry_031",
+      "role": "user",
+      "content": "再把 readinessProbe 探测周期顺手往后调 6 秒试一下。"
+    },
+    {
+      "turn_id": 32,
+      "entry_id": "entry_032",
+      "role": "assistant",
+      "content": "已记录 readinessProbe 探测间隔调整为 6 秒。"
+    },
+    {
+      "turn_id": 33,
+      "entry_id": "entry_033",
+      "role": "user",
+      "content": "再把 readinessProbe 探测周期顺手往后调 7 秒试一下。"
+    },
+    {
+      "turn_id": 34,
+      "entry_id": "entry_034",
+      "role": "assistant",
+      "content": "已记录 readinessProbe 探测间隔调整为 7 秒。"
+    }
+  ],
+  "eval_probes": [
+    {
+      "probe_id": "probe_c4",
+      "at_turn": 34,
+      "query": "集群没法给这个服务扩容节点内存了，代码或启动参数层怎么根治容器频繁 OOMKill 重启？",
+      "required_evidence_entry_ids": [
+        "entry_004"
+      ],
+      "forbidden_superseded_entry_ids": [],
+      "expected_rubric": [
+        "引用容器 cgroup 内存上限 512Mi 的事实",
+        "建议设置软内存上限 GOMEMLIMIT（如 400MiB~430MiB）配合 GC 调优防止触顶 OOMKill"
+      ]
+    }
+  ]
+}

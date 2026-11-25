@@ -1,0 +1,372 @@
+{
+  "case_id": "suite_b_05_deploy_env_and_branch_switch",
+  "suite": "suite_b_conflict",
+  "title": "CI/CD 部署环境与分支策略切换冲突",
+  "description": "从 develop -> staging-us 全量直推切换为 release/* -> prod-sg 10% 灰度，防止旧测试区规则污染上线配置。",
+  "system_prompt": "You are gp, a high-performance Go coding and ops agent.",
+  "token_budget": 900,
+  "turns": [
+    {
+      "turn_id": 1,
+      "entry_id": "entry_001",
+      "role": "user",
+      "content": "当前发布流水线仅对接美西测试区 `staging-us`，触发分支为 `develop`，全量直接部署。",
+      "mentioned_entities": [
+        "staging-us",
+        "develop_branch"
+      ],
+      "constraint_event": {
+        "action": "add",
+        "constraint_id": "cst_rel_01",
+        "statement": "部署目标为 staging-us，分支 develop，直接全量发布"
+      }
+    },
+    {
+      "turn_id": 2,
+      "entry_id": "entry_002",
+      "role": "assistant",
+      "content": "已记录，当前流水线对应 `staging-us` 与 `develop`。"
+    },
+    {
+      "turn_id": 3,
+      "entry_id": "entry_003",
+      "role": "user",
+      "content": "看下现有 Dockerfile 多阶段构建。"
+    },
+    {
+      "turn_id": 4,
+      "entry_id": "entry_004",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_dist_4_0",
+          "name": "read",
+          "arguments": "{\"path\": \"Dockerfile\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 5,
+      "entry_id": "entry_005",
+      "role": "tool",
+      "tool_call_id": "call_dist_4_0",
+      "content": "FROM gcr.io/distroless/static-debian12",
+      "mentioned_entities": [
+        "Dockerfile"
+      ]
+    },
+    {
+      "turn_id": 6,
+      "entry_id": "entry_006",
+      "role": "assistant",
+      "content": "使用 distroless 基础镜像。"
+    },
+    {
+      "turn_id": 7,
+      "entry_id": "entry_007",
+      "role": "user",
+      "content": "检查镜像仓库地址。"
+    },
+    {
+      "turn_id": 8,
+      "entry_id": "entry_008",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_dist_8_1",
+          "name": "read",
+          "arguments": "{\"path\": \".github/workflows/ci.yml\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 9,
+      "entry_id": "entry_009",
+      "role": "tool",
+      "tool_call_id": "call_dist_8_1",
+      "content": "REGISTRY: registry.internal",
+      "mentioned_entities": [
+        ".github/workflows/ci.yml"
+      ]
+    },
+    {
+      "turn_id": 10,
+      "entry_id": "entry_010",
+      "role": "assistant",
+      "content": "镜像仓库已确认。"
+    },
+    {
+      "turn_id": 11,
+      "entry_id": "entry_011",
+      "role": "user",
+      "content": "准备正式割接新加坡生产区！废弃 `staging-us` 与 `develop` 的发布规则，改为仅监听 `release/*` 分支，目标集群切换到 `prod-sg`，且强制先灰 10% 流量观察 15 分钟再全量。",
+      "mentioned_entities": [
+        "prod-sg",
+        "release_branch",
+        "canary_10pct"
+      ],
+      "constraint_event": {
+        "action": "supersede",
+        "constraint_id": "cst_rel_02",
+        "supersedes": "cst_rel_01",
+        "statement": "目标集群切换为 prod-sg，仅由 release/* 分支触发，强制 10% 灰度 15 分钟"
+      }
+    },
+    {
+      "turn_id": 12,
+      "entry_id": "entry_012",
+      "role": "assistant",
+      "content": "明白，已切换至 `prod-sg` + `release/*` + 10% 灰度发布规则。"
+    },
+    {
+      "turn_id": 13,
+      "entry_id": "entry_013",
+      "role": "user",
+      "content": "看下健康探针路径。"
+    },
+    {
+      "turn_id": 14,
+      "entry_id": "entry_014",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_dist_14_0",
+          "name": "read",
+          "arguments": "{\"path\": \"deploy/k8s/deployment.yaml\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 15,
+      "entry_id": "entry_015",
+      "role": "tool",
+      "tool_call_id": "call_dist_14_0",
+      "content": "livenessProbe:\n  httpGet:\n    path: /healthz",
+      "mentioned_entities": [
+        "deploy/k8s/deployment.yaml"
+      ]
+    },
+    {
+      "turn_id": 16,
+      "entry_id": "entry_016",
+      "role": "assistant",
+      "content": "探针路径为 /healthz。"
+    },
+    {
+      "turn_id": 17,
+      "entry_id": "entry_017",
+      "role": "user",
+      "content": "跑一次 Helm lint。"
+    },
+    {
+      "turn_id": 18,
+      "entry_id": "entry_018",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_dist_18_1",
+          "name": "bash",
+          "arguments": "{\"command\": \"helm lint deploy/k8s\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 19,
+      "entry_id": "entry_019",
+      "role": "tool",
+      "tool_call_id": "call_dist_18_1",
+      "content": "1 chart(s) linted, 0 chart(s) failed",
+      "mentioned_entities": [
+        "helm"
+      ]
+    },
+    {
+      "turn_id": 20,
+      "entry_id": "entry_020",
+      "role": "assistant",
+      "content": "Helm lint 通过。"
+    },
+    {
+      "turn_id": 21,
+      "entry_id": "entry_021",
+      "role": "user",
+      "content": "顺便跑一下第 1 组例行巡检与模块健康检查脚本，确保无回归。"
+    },
+    {
+      "turn_id": 22,
+      "entry_id": "entry_022",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_pad_b5_0",
+          "name": "bash",
+          "arguments": "{\"command\": \"go test -v ./internal/health -run TestRoutineCheck_b5_0\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 23,
+      "entry_id": "entry_023",
+      "role": "tool",
+      "tool_call_id": "call_pad_b5_0",
+      "content": "=== RUN   TestRoutineCheck_b5_0_0\n    suite_test.go:40: checked subcomponent=b5_0 sha=154e6f09284fc718 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_0_0 (0.01s)\n=== RUN   TestRoutineCheck_b5_0_1\n    suite_test.go:47: checked subcomponent=b5_1 sha=f153f7b2fbba5518 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_0_1 (0.01s)\n=== RUN   TestRoutineCheck_b5_0_2\n    suite_test.go:54: checked subcomponent=b5_2 sha=2f5d70e944d48ee7 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_0_2 (0.01s)\n=== RUN   TestRoutineCheck_b5_0_3\n    suite_test.go:61: checked subcomponent=b5_3 sha=2fb8d511d2c58337 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_0_3 (0.01s)\n=== RUN   TestRoutineCheck_b5_0_4\n    suite_test.go:68: checked subcomponent=b5_4 sha=4431232e07336cb4 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_0_4 (0.01s)\n=== RUN   TestRoutineCheck_b5_0_5\n    suite_test.go:75: checked subcomponent=b5_5 sha=f4f3c3d639d9664f status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_0_5 (0.01s)\n=== RUN   TestRoutineCheck_b5_0_6\n    suite_test.go:82: checked subcomponent=b5_6 sha=8ad86fa3b4b845b0 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_0_6 (0.01s)\n=== RUN   TestRoutineCheck_b5_0_7\n    suite_test.go:89: checked subcomponent=b5_7 sha=bfd8238556fa975e status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_0_7 (0.01s)\n=== RUN   TestRoutineCheck_b5_0_8\n    suite_test.go:96: checked subcomponent=b5_8 sha=13ff9189945ac5a0 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_0_8 (0.01s)\n=== RUN   TestRoutineCheck_b5_0_9\n    suite_test.go:103: checked subcomponent=b5_9 sha=17705bd999cbacb6 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_0_9 (0.01s)\n=== RUN   TestRoutineCheck_b5_0_10\n    suite_test.go:110: checked subcomponent=b5_10 sha=6f5fc1b855800f2e status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_0_10 (0.01s)\n=== RUN   TestRoutineCheck_b5_0_11\n    suite_test.go:117: checked subcomponent=b5_11 sha=b0ce853d8b3095be status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_0_11 (0.01s)"
+    },
+    {
+      "turn_id": 24,
+      "entry_id": "entry_024",
+      "role": "assistant",
+      "content": "第 1 组例行巡检 10 项测试全部 PASS，无异常。"
+    },
+    {
+      "turn_id": 25,
+      "entry_id": "entry_025",
+      "role": "user",
+      "content": "顺便跑一下第 2 组例行巡检与模块健康检查脚本，确保无回归。"
+    },
+    {
+      "turn_id": 26,
+      "entry_id": "entry_026",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_pad_b5_1",
+          "name": "bash",
+          "arguments": "{\"command\": \"go test -v ./internal/health -run TestRoutineCheck_b5_1\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 27,
+      "entry_id": "entry_027",
+      "role": "tool",
+      "tool_call_id": "call_pad_b5_1",
+      "content": "=== RUN   TestRoutineCheck_b5_1_0\n    suite_test.go:40: checked subcomponent=b5_0 sha=7b287ef63030888c status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_1_0 (0.01s)\n=== RUN   TestRoutineCheck_b5_1_1\n    suite_test.go:47: checked subcomponent=b5_1 sha=6f89651d839a4ed2 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_1_1 (0.01s)\n=== RUN   TestRoutineCheck_b5_1_2\n    suite_test.go:54: checked subcomponent=b5_2 sha=0b15b534c627b5c2 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_1_2 (0.01s)\n=== RUN   TestRoutineCheck_b5_1_3\n    suite_test.go:61: checked subcomponent=b5_3 sha=5dc7fae02c16bdd0 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_1_3 (0.01s)\n=== RUN   TestRoutineCheck_b5_1_4\n    suite_test.go:68: checked subcomponent=b5_4 sha=8384c19302c90db2 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_1_4 (0.01s)\n=== RUN   TestRoutineCheck_b5_1_5\n    suite_test.go:75: checked subcomponent=b5_5 sha=ce0adbcb05b0ae0e status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_1_5 (0.01s)\n=== RUN   TestRoutineCheck_b5_1_6\n    suite_test.go:82: checked subcomponent=b5_6 sha=514cb00de7710f6d status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_1_6 (0.01s)\n=== RUN   TestRoutineCheck_b5_1_7\n    suite_test.go:89: checked subcomponent=b5_7 sha=27d4ac2c74f7a0f6 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_1_7 (0.01s)\n=== RUN   TestRoutineCheck_b5_1_8\n    suite_test.go:96: checked subcomponent=b5_8 sha=275ddbbc5171f9f0 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_1_8 (0.01s)\n=== RUN   TestRoutineCheck_b5_1_9\n    suite_test.go:103: checked subcomponent=b5_9 sha=5f8f676ddf2369f9 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_1_9 (0.01s)\n=== RUN   TestRoutineCheck_b5_1_10\n    suite_test.go:110: checked subcomponent=b5_10 sha=24bfb65c1f00ab2b status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_1_10 (0.01s)\n=== RUN   TestRoutineCheck_b5_1_11\n    suite_test.go:117: checked subcomponent=b5_11 sha=160a03bf5c3008fa status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_1_11 (0.01s)"
+    },
+    {
+      "turn_id": 28,
+      "entry_id": "entry_028",
+      "role": "assistant",
+      "content": "第 2 组例行巡检 10 项测试全部 PASS，无异常。"
+    },
+    {
+      "turn_id": 29,
+      "entry_id": "entry_029",
+      "role": "user",
+      "content": "顺便跑一下第 3 组例行巡检与模块健康检查脚本，确保无回归。"
+    },
+    {
+      "turn_id": 30,
+      "entry_id": "entry_030",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_pad_b5_2",
+          "name": "bash",
+          "arguments": "{\"command\": \"go test -v ./internal/health -run TestRoutineCheck_b5_2\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 31,
+      "entry_id": "entry_031",
+      "role": "tool",
+      "tool_call_id": "call_pad_b5_2",
+      "content": "=== RUN   TestRoutineCheck_b5_2_0\n    suite_test.go:40: checked subcomponent=b5_0 sha=9401375bf023c7b7 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_2_0 (0.01s)\n=== RUN   TestRoutineCheck_b5_2_1\n    suite_test.go:47: checked subcomponent=b5_1 sha=ee060689454baa85 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_2_1 (0.01s)\n=== RUN   TestRoutineCheck_b5_2_2\n    suite_test.go:54: checked subcomponent=b5_2 sha=22f8a5f886cb5ea5 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_2_2 (0.01s)\n=== RUN   TestRoutineCheck_b5_2_3\n    suite_test.go:61: checked subcomponent=b5_3 sha=f405bc0e992c2d4c status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_2_3 (0.01s)\n=== RUN   TestRoutineCheck_b5_2_4\n    suite_test.go:68: checked subcomponent=b5_4 sha=172f226b1cf90adc status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_2_4 (0.01s)\n=== RUN   TestRoutineCheck_b5_2_5\n    suite_test.go:75: checked subcomponent=b5_5 sha=7d3bd7f4d651b5be status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_2_5 (0.01s)\n=== RUN   TestRoutineCheck_b5_2_6\n    suite_test.go:82: checked subcomponent=b5_6 sha=13973d50bb10d5f9 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_2_6 (0.01s)\n=== RUN   TestRoutineCheck_b5_2_7\n    suite_test.go:89: checked subcomponent=b5_7 sha=001ae7abba0ec783 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_2_7 (0.01s)\n=== RUN   TestRoutineCheck_b5_2_8\n    suite_test.go:96: checked subcomponent=b5_8 sha=1a31c2300264922d status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_2_8 (0.01s)\n=== RUN   TestRoutineCheck_b5_2_9\n    suite_test.go:103: checked subcomponent=b5_9 sha=e4178fbb0a0185f1 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_2_9 (0.01s)\n=== RUN   TestRoutineCheck_b5_2_10\n    suite_test.go:110: checked subcomponent=b5_10 sha=98ab1be2128353de status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_2_10 (0.01s)\n=== RUN   TestRoutineCheck_b5_2_11\n    suite_test.go:117: checked subcomponent=b5_11 sha=f4eb5e80b26678b3 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_2_11 (0.01s)"
+    },
+    {
+      "turn_id": 32,
+      "entry_id": "entry_032",
+      "role": "assistant",
+      "content": "第 3 组例行巡检 10 项测试全部 PASS，无异常。"
+    },
+    {
+      "turn_id": 33,
+      "entry_id": "entry_033",
+      "role": "user",
+      "content": "顺便跑一下第 4 组例行巡检与模块健康检查脚本，确保无回归。"
+    },
+    {
+      "turn_id": 34,
+      "entry_id": "entry_034",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_pad_b5_3",
+          "name": "bash",
+          "arguments": "{\"command\": \"go test -v ./internal/health -run TestRoutineCheck_b5_3\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 35,
+      "entry_id": "entry_035",
+      "role": "tool",
+      "tool_call_id": "call_pad_b5_3",
+      "content": "=== RUN   TestRoutineCheck_b5_3_0\n    suite_test.go:40: checked subcomponent=b5_0 sha=4ad29931ebd44ad9 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_3_0 (0.01s)\n=== RUN   TestRoutineCheck_b5_3_1\n    suite_test.go:47: checked subcomponent=b5_1 sha=18d9e9754ad85c10 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_3_1 (0.01s)\n=== RUN   TestRoutineCheck_b5_3_2\n    suite_test.go:54: checked subcomponent=b5_2 sha=c97e2a7f74e7c7cc status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_3_2 (0.01s)\n=== RUN   TestRoutineCheck_b5_3_3\n    suite_test.go:61: checked subcomponent=b5_3 sha=11f5fdff166c72a9 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_3_3 (0.01s)\n=== RUN   TestRoutineCheck_b5_3_4\n    suite_test.go:68: checked subcomponent=b5_4 sha=a1128def3495ecc7 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_3_4 (0.01s)\n=== RUN   TestRoutineCheck_b5_3_5\n    suite_test.go:75: checked subcomponent=b5_5 sha=fb2374840b2182a1 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_3_5 (0.01s)\n=== RUN   TestRoutineCheck_b5_3_6\n    suite_test.go:82: checked subcomponent=b5_6 sha=b7f37e040b8b6952 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_3_6 (0.01s)\n=== RUN   TestRoutineCheck_b5_3_7\n    suite_test.go:89: checked subcomponent=b5_7 sha=eeeac4ecae37ac10 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_3_7 (0.01s)\n=== RUN   TestRoutineCheck_b5_3_8\n    suite_test.go:96: checked subcomponent=b5_8 sha=0ce7782c0e29694e status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_3_8 (0.01s)\n=== RUN   TestRoutineCheck_b5_3_9\n    suite_test.go:103: checked subcomponent=b5_9 sha=ce678c581b0140f4 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_3_9 (0.01s)\n=== RUN   TestRoutineCheck_b5_3_10\n    suite_test.go:110: checked subcomponent=b5_10 sha=3cea4476ce9d0a89 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_3_10 (0.01s)\n=== RUN   TestRoutineCheck_b5_3_11\n    suite_test.go:117: checked subcomponent=b5_11 sha=12baf6c28314f4b4 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_3_11 (0.01s)"
+    },
+    {
+      "turn_id": 36,
+      "entry_id": "entry_036",
+      "role": "assistant",
+      "content": "第 4 组例行巡检 10 项测试全部 PASS，无异常。"
+    },
+    {
+      "turn_id": 37,
+      "entry_id": "entry_037",
+      "role": "user",
+      "content": "顺便跑一下第 5 组例行巡检与模块健康检查脚本，确保无回归。"
+    },
+    {
+      "turn_id": 38,
+      "entry_id": "entry_038",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_pad_b5_4",
+          "name": "bash",
+          "arguments": "{\"command\": \"go test -v ./internal/health -run TestRoutineCheck_b5_4\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 39,
+      "entry_id": "entry_039",
+      "role": "tool",
+      "tool_call_id": "call_pad_b5_4",
+      "content": "=== RUN   TestRoutineCheck_b5_4_0\n    suite_test.go:40: checked subcomponent=b5_0 sha=ca64e7d76f186066 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_4_0 (0.01s)\n=== RUN   TestRoutineCheck_b5_4_1\n    suite_test.go:47: checked subcomponent=b5_1 sha=72bd6c01b4b9ae00 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_4_1 (0.01s)\n=== RUN   TestRoutineCheck_b5_4_2\n    suite_test.go:54: checked subcomponent=b5_2 sha=2bcfc35729fabef5 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_4_2 (0.01s)\n=== RUN   TestRoutineCheck_b5_4_3\n    suite_test.go:61: checked subcomponent=b5_3 sha=4b1b80e44a783409 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_4_3 (0.01s)\n=== RUN   TestRoutineCheck_b5_4_4\n    suite_test.go:68: checked subcomponent=b5_4 sha=535c9e54ceeab764 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_4_4 (0.01s)\n=== RUN   TestRoutineCheck_b5_4_5\n    suite_test.go:75: checked subcomponent=b5_5 sha=cdd8ed1a1f451ebb status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_4_5 (0.01s)\n=== RUN   TestRoutineCheck_b5_4_6\n    suite_test.go:82: checked subcomponent=b5_6 sha=721c4fb85a959093 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_4_6 (0.01s)\n=== RUN   TestRoutineCheck_b5_4_7\n    suite_test.go:89: checked subcomponent=b5_7 sha=3deefaffe710c2c0 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_4_7 (0.01s)\n=== RUN   TestRoutineCheck_b5_4_8\n    suite_test.go:96: checked subcomponent=b5_8 sha=886ec53b17a52288 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_4_8 (0.01s)\n=== RUN   TestRoutineCheck_b5_4_9\n    suite_test.go:103: checked subcomponent=b5_9 sha=35680e39b12a56b8 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_4_9 (0.01s)\n=== RUN   TestRoutineCheck_b5_4_10\n    suite_test.go:110: checked subcomponent=b5_10 sha=6f80004ee8c99808 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_4_10 (0.01s)\n=== RUN   TestRoutineCheck_b5_4_11\n    suite_test.go:117: checked subcomponent=b5_11 sha=0cfb61cc37062f88 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b5_4_11 (0.01s)"
+    },
+    {
+      "turn_id": 40,
+      "entry_id": "entry_040",
+      "role": "assistant",
+      "content": "第 5 组例行巡检 10 项测试全部 PASS，无异常。"
+    }
+  ],
+  "eval_probes": [
+    {
+      "probe_id": "probe_b5",
+      "at_turn": 40,
+      "query": "补全发布 workflow 的触发分支条件、目标环境参数以及发布策略步骤。",
+      "required_evidence_entry_ids": [
+        "entry_011"
+      ],
+      "forbidden_superseded_entry_ids": [
+        "entry_001"
+      ],
+      "expected_rubric": [
+        "触发分支匹配 release/*，不得包含 develop",
+        "目标集群为 prod-sg，不得写 staging-us",
+        "包含 10% 灰度与 15 分钟观察窗"
+      ]
+    }
+  ]
+}

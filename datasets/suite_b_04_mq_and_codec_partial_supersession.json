@@ -1,0 +1,396 @@
+{
+  "case_id": "suite_b_04_mq_and_codec_partial_supersession",
+  "suite": "suite_b_conflict",
+  "title": "传输层与序列化格式分段正交演进",
+  "description": "先将 Kafka 换成 NATS JetStream，再将 JSON 换成 Protobuf；检验中间步保留的 NATS JetStream 不被最后一次更新误丢，且旧 Kafka/JSON 被屏蔽。",
+  "system_prompt": "You are gp, a high-performance Go coding and ops agent.",
+  "token_budget": 900,
+  "turns": [
+    {
+      "turn_id": 1,
+      "entry_id": "entry_001",
+      "role": "user",
+      "content": "异步事件总线初始选型：传输层用 Kafka（Topic `billing.events`），消息体序列化格式用 JSON。",
+      "mentioned_entities": [
+        "kafka",
+        "json_payload",
+        "billing.events"
+      ],
+      "constraint_event": {
+        "action": "add",
+        "constraint_id": "cst_mq_01",
+        "statement": "消息总线使用 Kafka，消息格式使用 JSON"
+      }
+    },
+    {
+      "turn_id": 2,
+      "entry_id": "entry_002",
+      "role": "assistant",
+      "content": "已确认：Kafka + JSON 格式。"
+    },
+    {
+      "turn_id": 3,
+      "entry_id": "entry_003",
+      "role": "user",
+      "content": "看看消费者并发数参数。"
+    },
+    {
+      "turn_id": 4,
+      "entry_id": "entry_004",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_dist_4_0",
+          "name": "read",
+          "arguments": "{\"path\": \"internal/worker/config.go\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 5,
+      "entry_id": "entry_005",
+      "role": "tool",
+      "tool_call_id": "call_dist_4_0",
+      "content": "const WorkerConcurrency = 16",
+      "mentioned_entities": [
+        "internal/worker/config.go"
+      ]
+    },
+    {
+      "turn_id": 6,
+      "entry_id": "entry_006",
+      "role": "assistant",
+      "content": "消费者并发 16。"
+    },
+    {
+      "turn_id": 7,
+      "entry_id": "entry_007",
+      "role": "user",
+      "content": "运维裁撤 Kafka 集群了：传输层全量替换为 NATS JetStream（Stream 名仍沿用 `billing.events`），但消息体格式暂时不动，继续用 JSON。",
+      "mentioned_entities": [
+        "nats_jetstream",
+        "kafka",
+        "billing.events"
+      ],
+      "constraint_event": {
+        "action": "supersede",
+        "constraint_id": "cst_mq_02",
+        "supersedes": "cst_mq_01",
+        "statement": "传输层替换为 NATS JetStream（Stream: billing.events），序列化暂维持 JSON"
+      }
+    },
+    {
+      "turn_id": 8,
+      "entry_id": "entry_008",
+      "role": "assistant",
+      "content": "已切换传输层到 NATS JetStream，序列化暂维持 JSON。"
+    },
+    {
+      "turn_id": 9,
+      "entry_id": "entry_009",
+      "role": "user",
+      "content": "检查账单事件字段长度。"
+    },
+    {
+      "turn_id": 10,
+      "entry_id": "entry_010",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_dist_10_0",
+          "name": "read",
+          "arguments": "{\"path\": \"internal/events/billing.go\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 11,
+      "entry_id": "entry_011",
+      "role": "tool",
+      "tool_call_id": "call_dist_10_0",
+      "content": "type BillingEvent struct { ID string; Amount int64 }",
+      "mentioned_entities": [
+        "internal/events/billing.go"
+      ]
+    },
+    {
+      "turn_id": 12,
+      "entry_id": "entry_012",
+      "role": "assistant",
+      "content": "字段已确认。"
+    },
+    {
+      "turn_id": 13,
+      "entry_id": "entry_013",
+      "role": "user",
+      "content": "追加格式升级：由于 JSON 体积过大，序列化格式正式废除 JSON，全面改为 Protobuf 二进制帧（传输中间件维持当前选择不变）。",
+      "mentioned_entities": [
+        "protobuf_binary",
+        "json_payload"
+      ],
+      "constraint_event": {
+        "action": "supersede",
+        "constraint_id": "cst_fmt_02",
+        "supersedes": "cst_mq_02",
+        "statement": "序列化格式废除 JSON，改用 Protobuf 二进制帧（NATS JetStream 维持不变）"
+      }
+    },
+    {
+      "turn_id": 14,
+      "entry_id": "entry_014",
+      "role": "assistant",
+      "content": "明白，最终组合为 NATS JetStream + Protobuf 二进制帧。"
+    },
+    {
+      "turn_id": 15,
+      "entry_id": "entry_015",
+      "role": "user",
+      "content": "查看重试死信 subject 约定。"
+    },
+    {
+      "turn_id": 16,
+      "entry_id": "entry_016",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_dist_16_0",
+          "name": "read",
+          "arguments": "{\"path\": \"internal/events/subjects.go\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 17,
+      "entry_id": "entry_017",
+      "role": "tool",
+      "tool_call_id": "call_dist_16_0",
+      "content": "const DeadLetterSubject = \"billing.events.dlq\"",
+      "mentioned_entities": [
+        "internal/events/subjects.go"
+      ]
+    },
+    {
+      "turn_id": 18,
+      "entry_id": "entry_018",
+      "role": "assistant",
+      "content": "死信 subject 已定义。"
+    },
+    {
+      "turn_id": 19,
+      "entry_id": "entry_019",
+      "role": "user",
+      "content": "跑一次编译检查。"
+    },
+    {
+      "turn_id": 20,
+      "entry_id": "entry_020",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_dist_20_1",
+          "name": "bash",
+          "arguments": "{\"command\": \"go vet ./internal/events/...\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 21,
+      "entry_id": "entry_021",
+      "role": "tool",
+      "tool_call_id": "call_dist_20_1",
+      "content": "go vet passed",
+      "mentioned_entities": [
+        "internal/events"
+      ]
+    },
+    {
+      "turn_id": 22,
+      "entry_id": "entry_022",
+      "role": "assistant",
+      "content": "go vet 无告警。"
+    },
+    {
+      "turn_id": 23,
+      "entry_id": "entry_023",
+      "role": "user",
+      "content": "顺便跑一下第 1 组例行巡检与模块健康检查脚本，确保无回归。"
+    },
+    {
+      "turn_id": 24,
+      "entry_id": "entry_024",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_pad_b4_0",
+          "name": "bash",
+          "arguments": "{\"command\": \"go test -v ./internal/health -run TestRoutineCheck_b4_0\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 25,
+      "entry_id": "entry_025",
+      "role": "tool",
+      "tool_call_id": "call_pad_b4_0",
+      "content": "=== RUN   TestRoutineCheck_b4_0_0\n    suite_test.go:40: checked subcomponent=b4_0 sha=01ca410ebb01336b status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_0_0 (0.01s)\n=== RUN   TestRoutineCheck_b4_0_1\n    suite_test.go:47: checked subcomponent=b4_1 sha=59e287d2eb47e4b3 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_0_1 (0.01s)\n=== RUN   TestRoutineCheck_b4_0_2\n    suite_test.go:54: checked subcomponent=b4_2 sha=6d8304eab6ef3ea0 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_0_2 (0.01s)\n=== RUN   TestRoutineCheck_b4_0_3\n    suite_test.go:61: checked subcomponent=b4_3 sha=f7f31ee89ac50be4 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_0_3 (0.01s)\n=== RUN   TestRoutineCheck_b4_0_4\n    suite_test.go:68: checked subcomponent=b4_4 sha=5e63b42769b047bb status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_0_4 (0.01s)\n=== RUN   TestRoutineCheck_b4_0_5\n    suite_test.go:75: checked subcomponent=b4_5 sha=2533751a29f92424 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_0_5 (0.01s)\n=== RUN   TestRoutineCheck_b4_0_6\n    suite_test.go:82: checked subcomponent=b4_6 sha=e19fac444451684b status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_0_6 (0.01s)\n=== RUN   TestRoutineCheck_b4_0_7\n    suite_test.go:89: checked subcomponent=b4_7 sha=df07c3a6f5f969c7 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_0_7 (0.01s)\n=== RUN   TestRoutineCheck_b4_0_8\n    suite_test.go:96: checked subcomponent=b4_8 sha=8c004a4080a7abae status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_0_8 (0.01s)\n=== RUN   TestRoutineCheck_b4_0_9\n    suite_test.go:103: checked subcomponent=b4_9 sha=2c80210a64ba69fe status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_0_9 (0.01s)\n=== RUN   TestRoutineCheck_b4_0_10\n    suite_test.go:110: checked subcomponent=b4_10 sha=388b654ae0f59e31 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_0_10 (0.01s)\n=== RUN   TestRoutineCheck_b4_0_11\n    suite_test.go:117: checked subcomponent=b4_11 sha=41693cbba5dc57fa status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_0_11 (0.01s)"
+    },
+    {
+      "turn_id": 26,
+      "entry_id": "entry_026",
+      "role": "assistant",
+      "content": "第 1 组例行巡检 10 项测试全部 PASS，无异常。"
+    },
+    {
+      "turn_id": 27,
+      "entry_id": "entry_027",
+      "role": "user",
+      "content": "顺便跑一下第 2 组例行巡检与模块健康检查脚本，确保无回归。"
+    },
+    {
+      "turn_id": 28,
+      "entry_id": "entry_028",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_pad_b4_1",
+          "name": "bash",
+          "arguments": "{\"command\": \"go test -v ./internal/health -run TestRoutineCheck_b4_1\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 29,
+      "entry_id": "entry_029",
+      "role": "tool",
+      "tool_call_id": "call_pad_b4_1",
+      "content": "=== RUN   TestRoutineCheck_b4_1_0\n    suite_test.go:40: checked subcomponent=b4_0 sha=81cded9f1ee59fd5 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_1_0 (0.01s)\n=== RUN   TestRoutineCheck_b4_1_1\n    suite_test.go:47: checked subcomponent=b4_1 sha=c89b52786b7d67bf status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_1_1 (0.01s)\n=== RUN   TestRoutineCheck_b4_1_2\n    suite_test.go:54: checked subcomponent=b4_2 sha=c46d6ab22e2a8863 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_1_2 (0.01s)\n=== RUN   TestRoutineCheck_b4_1_3\n    suite_test.go:61: checked subcomponent=b4_3 sha=7ff0f2302be82c81 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_1_3 (0.01s)\n=== RUN   TestRoutineCheck_b4_1_4\n    suite_test.go:68: checked subcomponent=b4_4 sha=bfe53a2b1704c22d status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_1_4 (0.01s)\n=== RUN   TestRoutineCheck_b4_1_5\n    suite_test.go:75: checked subcomponent=b4_5 sha=ce492440f3db11dc status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_1_5 (0.01s)\n=== RUN   TestRoutineCheck_b4_1_6\n    suite_test.go:82: checked subcomponent=b4_6 sha=9f8bae4029bcd9fd status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_1_6 (0.01s)\n=== RUN   TestRoutineCheck_b4_1_7\n    suite_test.go:89: checked subcomponent=b4_7 sha=23804017b8cb4816 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_1_7 (0.01s)\n=== RUN   TestRoutineCheck_b4_1_8\n    suite_test.go:96: checked subcomponent=b4_8 sha=a9bc529c1a6efe9b status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_1_8 (0.01s)\n=== RUN   TestRoutineCheck_b4_1_9\n    suite_test.go:103: checked subcomponent=b4_9 sha=b720f0d958245fc0 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_1_9 (0.01s)\n=== RUN   TestRoutineCheck_b4_1_10\n    suite_test.go:110: checked subcomponent=b4_10 sha=f9ec4d460f638191 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_1_10 (0.01s)\n=== RUN   TestRoutineCheck_b4_1_11\n    suite_test.go:117: checked subcomponent=b4_11 sha=6d8a49ac11cf0cda status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_1_11 (0.01s)"
+    },
+    {
+      "turn_id": 30,
+      "entry_id": "entry_030",
+      "role": "assistant",
+      "content": "第 2 组例行巡检 10 项测试全部 PASS，无异常。"
+    },
+    {
+      "turn_id": 31,
+      "entry_id": "entry_031",
+      "role": "user",
+      "content": "顺便跑一下第 3 组例行巡检与模块健康检查脚本，确保无回归。"
+    },
+    {
+      "turn_id": 32,
+      "entry_id": "entry_032",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_pad_b4_2",
+          "name": "bash",
+          "arguments": "{\"command\": \"go test -v ./internal/health -run TestRoutineCheck_b4_2\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 33,
+      "entry_id": "entry_033",
+      "role": "tool",
+      "tool_call_id": "call_pad_b4_2",
+      "content": "=== RUN   TestRoutineCheck_b4_2_0\n    suite_test.go:40: checked subcomponent=b4_0 sha=40c0b484f9719a78 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_2_0 (0.01s)\n=== RUN   TestRoutineCheck_b4_2_1\n    suite_test.go:47: checked subcomponent=b4_1 sha=385928a7599164e9 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_2_1 (0.01s)\n=== RUN   TestRoutineCheck_b4_2_2\n    suite_test.go:54: checked subcomponent=b4_2 sha=29c6fb0396d6858e status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_2_2 (0.01s)\n=== RUN   TestRoutineCheck_b4_2_3\n    suite_test.go:61: checked subcomponent=b4_3 sha=f09ed5c651e8c204 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_2_3 (0.01s)\n=== RUN   TestRoutineCheck_b4_2_4\n    suite_test.go:68: checked subcomponent=b4_4 sha=70be3087a8c0af12 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_2_4 (0.01s)\n=== RUN   TestRoutineCheck_b4_2_5\n    suite_test.go:75: checked subcomponent=b4_5 sha=6bd468de02e274ca status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_2_5 (0.01s)\n=== RUN   TestRoutineCheck_b4_2_6\n    suite_test.go:82: checked subcomponent=b4_6 sha=9c4e5f6ac49f8918 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_2_6 (0.01s)\n=== RUN   TestRoutineCheck_b4_2_7\n    suite_test.go:89: checked subcomponent=b4_7 sha=ec780f6677a704fe status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_2_7 (0.01s)\n=== RUN   TestRoutineCheck_b4_2_8\n    suite_test.go:96: checked subcomponent=b4_8 sha=0c689c4180b13db0 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_2_8 (0.01s)\n=== RUN   TestRoutineCheck_b4_2_9\n    suite_test.go:103: checked subcomponent=b4_9 sha=c3fed6ddd2232fea status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_2_9 (0.01s)\n=== RUN   TestRoutineCheck_b4_2_10\n    suite_test.go:110: checked subcomponent=b4_10 sha=61a623e71eb9d41b status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_2_10 (0.01s)\n=== RUN   TestRoutineCheck_b4_2_11\n    suite_test.go:117: checked subcomponent=b4_11 sha=f5a1b38756915362 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_2_11 (0.01s)"
+    },
+    {
+      "turn_id": 34,
+      "entry_id": "entry_034",
+      "role": "assistant",
+      "content": "第 3 组例行巡检 10 项测试全部 PASS，无异常。"
+    },
+    {
+      "turn_id": 35,
+      "entry_id": "entry_035",
+      "role": "user",
+      "content": "顺便跑一下第 4 组例行巡检与模块健康检查脚本，确保无回归。"
+    },
+    {
+      "turn_id": 36,
+      "entry_id": "entry_036",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_pad_b4_3",
+          "name": "bash",
+          "arguments": "{\"command\": \"go test -v ./internal/health -run TestRoutineCheck_b4_3\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 37,
+      "entry_id": "entry_037",
+      "role": "tool",
+      "tool_call_id": "call_pad_b4_3",
+      "content": "=== RUN   TestRoutineCheck_b4_3_0\n    suite_test.go:40: checked subcomponent=b4_0 sha=66b138174c0a7ce4 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_3_0 (0.01s)\n=== RUN   TestRoutineCheck_b4_3_1\n    suite_test.go:47: checked subcomponent=b4_1 sha=4ca04d13b2073a02 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_3_1 (0.01s)\n=== RUN   TestRoutineCheck_b4_3_2\n    suite_test.go:54: checked subcomponent=b4_2 sha=59d5a045b8c79f78 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_3_2 (0.01s)\n=== RUN   TestRoutineCheck_b4_3_3\n    suite_test.go:61: checked subcomponent=b4_3 sha=0800b4dbea12a16d status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_3_3 (0.01s)\n=== RUN   TestRoutineCheck_b4_3_4\n    suite_test.go:68: checked subcomponent=b4_4 sha=1f2cff9e9ca3e0b0 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_3_4 (0.01s)\n=== RUN   TestRoutineCheck_b4_3_5\n    suite_test.go:75: checked subcomponent=b4_5 sha=b3b0ce501caface2 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_3_5 (0.01s)\n=== RUN   TestRoutineCheck_b4_3_6\n    suite_test.go:82: checked subcomponent=b4_6 sha=c2b3b719d1437faa status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_3_6 (0.01s)\n=== RUN   TestRoutineCheck_b4_3_7\n    suite_test.go:89: checked subcomponent=b4_7 sha=7f4e3bdf437c9f20 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_3_7 (0.01s)\n=== RUN   TestRoutineCheck_b4_3_8\n    suite_test.go:96: checked subcomponent=b4_8 sha=cd803d6f7f2046e8 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_3_8 (0.01s)\n=== RUN   TestRoutineCheck_b4_3_9\n    suite_test.go:103: checked subcomponent=b4_9 sha=6d3711ac2227de29 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_3_9 (0.01s)\n=== RUN   TestRoutineCheck_b4_3_10\n    suite_test.go:110: checked subcomponent=b4_10 sha=771b555511dbd2ac status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_3_10 (0.01s)\n=== RUN   TestRoutineCheck_b4_3_11\n    suite_test.go:117: checked subcomponent=b4_11 sha=5504178f74499de6 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_3_11 (0.01s)"
+    },
+    {
+      "turn_id": 38,
+      "entry_id": "entry_038",
+      "role": "assistant",
+      "content": "第 4 组例行巡检 10 项测试全部 PASS，无异常。"
+    },
+    {
+      "turn_id": 39,
+      "entry_id": "entry_039",
+      "role": "user",
+      "content": "顺便跑一下第 5 组例行巡检与模块健康检查脚本，确保无回归。"
+    },
+    {
+      "turn_id": 40,
+      "entry_id": "entry_040",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_pad_b4_4",
+          "name": "bash",
+          "arguments": "{\"command\": \"go test -v ./internal/health -run TestRoutineCheck_b4_4\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 41,
+      "entry_id": "entry_041",
+      "role": "tool",
+      "tool_call_id": "call_pad_b4_4",
+      "content": "=== RUN   TestRoutineCheck_b4_4_0\n    suite_test.go:40: checked subcomponent=b4_0 sha=96d1d5ae82a5a37f status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_4_0 (0.01s)\n=== RUN   TestRoutineCheck_b4_4_1\n    suite_test.go:47: checked subcomponent=b4_1 sha=d785c24cfdb5acbc status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_4_1 (0.01s)\n=== RUN   TestRoutineCheck_b4_4_2\n    suite_test.go:54: checked subcomponent=b4_2 sha=84957fdd5c7b8757 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_4_2 (0.01s)\n=== RUN   TestRoutineCheck_b4_4_3\n    suite_test.go:61: checked subcomponent=b4_3 sha=bd982acd4b7bd83d status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_4_3 (0.01s)\n=== RUN   TestRoutineCheck_b4_4_4\n    suite_test.go:68: checked subcomponent=b4_4 sha=302043bc71d109cc status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_4_4 (0.01s)\n=== RUN   TestRoutineCheck_b4_4_5\n    suite_test.go:75: checked subcomponent=b4_5 sha=3fd903f60a5d9fd2 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_4_5 (0.01s)\n=== RUN   TestRoutineCheck_b4_4_6\n    suite_test.go:82: checked subcomponent=b4_6 sha=dad685567dfdbaca status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_4_6 (0.01s)\n=== RUN   TestRoutineCheck_b4_4_7\n    suite_test.go:89: checked subcomponent=b4_7 sha=99444e7f7a53db60 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_4_7 (0.01s)\n=== RUN   TestRoutineCheck_b4_4_8\n    suite_test.go:96: checked subcomponent=b4_8 sha=1f9456ae1e329977 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_4_8 (0.01s)\n=== RUN   TestRoutineCheck_b4_4_9\n    suite_test.go:103: checked subcomponent=b4_9 sha=f053c3e673fb00a6 status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_4_9 (0.01s)\n=== RUN   TestRoutineCheck_b4_4_10\n    suite_test.go:110: checked subcomponent=b4_10 sha=4c6d78cd4cb7b8ca status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_4_10 (0.01s)\n=== RUN   TestRoutineCheck_b4_4_11\n    suite_test.go:117: checked subcomponent=b4_11 sha=41f0c40e47e0197b status=PASS elapsed=12ms\n--- PASS: TestRoutineCheck_b4_4_11 (0.01s)"
+    },
+    {
+      "turn_id": 42,
+      "entry_id": "entry_042",
+      "role": "assistant",
+      "content": "第 5 组例行巡检 10 项测试全部 PASS，无异常。"
+    }
+  ],
+  "eval_probes": [
+    {
+      "probe_id": "probe_b4",
+      "at_turn": 42,
+      "query": "写出向 `billing.events` 投递计费事件的生产者发布函数伪代码或 Go 实现。",
+      "required_evidence_entry_ids": [
+        "entry_007",
+        "entry_013"
+      ],
+      "forbidden_superseded_entry_ids": [
+        "entry_001"
+      ],
+      "expected_rubric": [
+        "明确使用 NATS JetStream 发布到 billing.events",
+        "使用 proto.Marshal 生成 Protobuf 二进制载荷",
+        "不得引用 Kafka Producer 或 json.Marshal"
+      ]
+    }
+  ]
+}

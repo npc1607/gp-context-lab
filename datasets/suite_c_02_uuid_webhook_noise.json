@@ -1,0 +1,286 @@
+{
+  "case_id": "suite_c_02_uuid_webhook_noise",
+  "suite": "suite_c_noise",
+  "title": "高熵 UUID/SHA256 回调样本风暴掩埋验签剔除规则",
+  "description": "大量高困惑度 UUID/Base64/SHA256 JSON 样本与状态码复读确认交替轰炸，检验验签规范 entry_003 能否在有限预算内幸存。",
+  "system_prompt": "You are gp, a high-performance Go coding and ops agent.",
+  "token_budget": 800,
+  "turns": [
+    {
+      "turn_id": 1,
+      "entry_id": "entry_001",
+      "role": "user",
+      "content": "今天重构 Webhook 回调验签模块。"
+    },
+    {
+      "turn_id": 2,
+      "entry_id": "entry_002",
+      "role": "assistant",
+      "content": "好的，请提供签名计算规范，我随后检查历史回调样本。"
+    },
+    {
+      "turn_id": 3,
+      "entry_id": "entry_003",
+      "role": "user",
+      "content": "签名规范核心约定：计算 `X-Sig` HMAC-SHA256 时，必须先从 JSON 请求体里剔除顶层的 `trace_id` 字段，再对其余 key 按 ASCII 升序拼接签算。",
+      "mentioned_entities": [
+        "webhook_sig",
+        "exclude_trace_id"
+      ],
+      "constraint_event": {
+        "action": "add",
+        "constraint_id": "cst_sig_01",
+        "statement": "X-Sig 验签前必须剔除顶层 trace_id 字段并按 key ASCII 升序拼接"
+      }
+    },
+    {
+      "turn_id": 4,
+      "entry_id": "entry_004",
+      "role": "assistant",
+      "content": "明白，验签预处理会剔除 `trace_id` 并按 ASCII 升序规范化。"
+    },
+    {
+      "turn_id": 5,
+      "entry_id": "entry_005",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c2_dump_0",
+          "name": "bash",
+          "arguments": "{\"command\": \"cat fixtures/webhook_0.json\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 6,
+      "entry_id": "entry_006",
+      "role": "tool",
+      "tool_call_id": "call_c2_dump_0",
+      "content": "{\n  \"batch_id\": \"b_200_00000000-0000-0000-0000-00000000012c\",\n  \"records\": [\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000bebb4b8\",\n      \"nonce_b64\": \"e63dd5656af3d527bbb305afd9582f64432ae717d367523db0d6ff16bde65ab0\",\n      \"sig_hex\": \"1cab2291f5b57d12df58e6e4340506daa79b20189e17798194f7a62cf0e88b88\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000bebd3a7\",\n      \"nonce_b64\": \"6ad7df022f9f8adb55367cab3fef904d206aa7df3d34410b703d4b0728df0cda\",\n      \"sig_hex\": \"3dd8c455409b10b1571048b1516e0f5ff6f9b29f34bae5aaf39c79e208347000\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000bebf296\",\n      \"nonce_b64\": \"46a65349d6103449b73aa11481cea255449f10bdf236adbcfdbe6d40a5f89993\",\n      \"sig_hex\": \"60bedd8c7928270a03c353a680b9e2b8451ff371100745707ed1fd215bb15e46\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000bec1185\",\n      \"nonce_b64\": \"e07125b56ae2a6c36a42466a2e34677a1ff6d69fe5dcfd2fb7f4aa2759683180\",\n      \"sig_hex\": \"f86df93f7cfdfe45c882b929e11a89ca5840fe1152a09bd581a53a5a58761bfe\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000bec3074\",\n      \"nonce_b64\": \"2811f2130222cc05f490220ed3e9f758862d7b80b03cb3c5a3dac2a341316fcf\",\n      \"sig_hex\": \"aba802ae7c7b72ff7d951f7f3f633e90169e4f25b2d7a220a9c84b2da7bd4b5b\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000bec4f63\",\n      \"nonce_b64\": \"4b7b5068e9c5506c4979becf489ab4bae07845b9e082113ba6099a93976a4005\",\n      \"sig_hex\": \"44d2ff04b85f760e62d6ddf385e66363df09da7aeffaa312116a7e91b5787bd1\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000bec6e52\",\n      \"nonce_b64\": \"dd415694af2bc9dbceaac08834d971d437454e323f06158f36551eeb43bac9cd\",\n      \"sig_hex\": \"174f3bdf14090bae8230666182909987d1459422d0e7a4e7bf606074225ad10d\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000bec8d41\",\n      \"nonce_b64\": \"946e50440f64c570608a98a19023a0abc399f976e672fed2fd36bbe3232b8510\",\n      \"sig_hex\": \"d5befb81a0be76aae39aa0cd0f17e298e2ad9cbbfc3519b87f2349c3ff336645\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000becac30\",\n      \"nonce_b64\": \"49f4836b2340d66ebea8ccef7e24c0948c4595d47fe6c04deb7d172cd9615df1\",\n      \"sig_hex\": \"45325eb8f6a4ba8d6edfc7bd71e8dc4d5166ed3b8ebf0919f88958dd72b591d9\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000beccb1f\",\n      \"nonce_b64\": \"24740f4be171f8ad7bfbc94184ca871ec0dbb234e68efdf487df7399148f87a8\",\n      \"sig_hex\": \"797158734028f393a107daf33687092036b197cfec011f4bb592b65c6b27aabc\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000becea0e\",\n      \"nonce_b64\": \"73c65507929637fc97822caafa6b7352cdabc7e28e6c655fe9b172b0d6fd4107\",\n      \"sig_hex\": \"98ec028075711b999eb7cf68040ae5cadebca17f9550c2b909f2c5a69b424ed1\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000bed08fd\",\n      \"nonce_b64\": \"7a385c817a94f789dbed3861a1469556188fe6e3aa6bffc7167791e66c81c19d\",\n      \"sig_hex\": \"b670dc02cdbca51e6357c58a8fc96d13b74588fd25a29849b929dbfe3d53e70f\"\n    }\n  ]\n}"
+    },
+    {
+      "turn_id": 7,
+      "entry_id": "entry_007",
+      "role": "assistant",
+      "content": "样本 `webhook_0.json` 的随机哈希负载已确认。"
+    },
+    {
+      "turn_id": 8,
+      "entry_id": "entry_008",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c2_dump_1",
+          "name": "bash",
+          "arguments": "{\"command\": \"cat fixtures/webhook_1.json\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 9,
+      "entry_id": "entry_009",
+      "role": "tool",
+      "tool_call_id": "call_c2_dump_1",
+      "content": "{\n  \"batch_id\": \"b_201_00000000-0000-0000-0000-00000000012d\",\n  \"records\": [\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000bfaf6e7\",\n      \"nonce_b64\": \"4c4454248b77ab63df6e14bc6c22c0f9fdc4161ac38a61f6c3204ce9abf230fc\",\n      \"sig_hex\": \"c709a0902a98c435d34b4b6b812d530f8712e53aea773a13809e02ff537e8eea\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000bfb15d6\",\n      \"nonce_b64\": \"9759f167c9f4659cee3666d92458806495e9862225fef30b4c5ea0b65ed2a563\",\n      \"sig_hex\": \"2d7b1219cc50ae5c7a07d28e786984192ff4ae40b9240deb9d15082522384e0b\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000bfb34c5\",\n      \"nonce_b64\": \"2c1371713a117a923ddce63f48eaa1823f6c57209472e0f77ad64d7e71c354bf\",\n      \"sig_hex\": \"fc2c5b4080109c59682046f4f45ed2a23bb66af17bdd937daae06129a8706ca0\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000bfb53b4\",\n      \"nonce_b64\": \"c11f605ac34a42af55dfc91ccec72862daa9ddcacfd65375177dac8336e61822\",\n      \"sig_hex\": \"94e15fcf3c2b853ffefeefcfc98b2e0dd52fa83aeab6985a7df03083eb91c30e\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000bfb72a3\",\n      \"nonce_b64\": \"2d163f9d597fe2363c7248ce270f11a3449bbcdfd5c14c5694491f175cb3acb4\",\n      \"sig_hex\": \"d84235f1b073f6baf8400f7190de77f068afcd0b2cd9e61ce44a9b027b8ad705\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000bfb9192\",\n      \"nonce_b64\": \"644a2009fe70248af789ab0860de4fc6eb1fef7edcc985e0ef104ab03f8e122d\",\n      \"sig_hex\": \"cfe1bb596bafc7096ae63ea15dc1dc4fba2f3130b2257908a09e6a895119e8d6\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000bfbb081\",\n      \"nonce_b64\": \"4b2a5c197958ce0f0afbd43c921e6fcb0ba0e94f13e7bd7dad56af323efb3bb1\",\n      \"sig_hex\": \"2e7ea9327f511fd8f37a11a1fa90b70478754ef6ceb2c65a53e0b5861239e2ff\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000bfbcf70\",\n      \"nonce_b64\": \"6c52710afcaeaf23c51310abebf429ffa72a40449bbc4a7e587b9a74540c4ec7\",\n      \"sig_hex\": \"8b7fdc5d29f8895e4e89697d704a32889c215f5d1322d5988493886a3fc334e0\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000bfbee5f\",\n      \"nonce_b64\": \"6dbc2fded031ccbffef5578b0ee3f75f8d401efcc1b88c0861e4f009ed2913b5\",\n      \"sig_hex\": \"b78942999ecbc091eb445d38ac9ff57797129a046569c6925727c317d875c217\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000bfc0d4e\",\n      \"nonce_b64\": \"47ad32b2f0d124e74a3cb3e284b2a2d51fb59f49a08d4ee1bc659cc454857692\",\n      \"sig_hex\": \"35b9b9c2f9d774d1095407177410cdca2faedec1b0061f7d38907b06fc246fc3\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000bfc2c3d\",\n      \"nonce_b64\": \"2270f837ee49f8a7ce484e77f82f5a346b49715f8668a672fec6b390b592cf10\",\n      \"sig_hex\": \"7c7271aca1357278b81bfd42e0937ad09f938276c4cf80c1308ef419ae896cc3\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000bfc4b2c\",\n      \"nonce_b64\": \"012bf43ae9611ee375fde489776d2318f3002f2a5a66f4f40a8fdf0016c1a95b\",\n      \"sig_hex\": \"95e827a95f9370172835ddd1d5e76afa49cf95a8945b422c64df7bc94b9dfe52\"\n    }\n  ]\n}"
+    },
+    {
+      "turn_id": 10,
+      "entry_id": "entry_010",
+      "role": "assistant",
+      "content": "样本 `webhook_1.json` 的随机哈希负载已确认。"
+    },
+    {
+      "turn_id": 11,
+      "entry_id": "entry_011",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c2_dump_2",
+          "name": "bash",
+          "arguments": "{\"command\": \"cat fixtures/webhook_2.json\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 12,
+      "entry_id": "entry_012",
+      "role": "tool",
+      "tool_call_id": "call_c2_dump_2",
+      "content": "{\n  \"batch_id\": \"b_202_00000000-0000-0000-0000-00000000012e\",\n  \"records\": [\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c0a3916\",\n      \"nonce_b64\": \"15e3bed058fccb1770fe59f14b0538ed49a01fa233e311ca722dbad1e4e39379\",\n      \"sig_hex\": \"cfde5fec8cf65ab88cc7e59eca530c30aae34733337023cbe2b5586fee8bb383\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c0a5805\",\n      \"nonce_b64\": \"6e895a20b5eefdb1f486a4848a8c6a5573dba372d31126e4c00011b557c7f044\",\n      \"sig_hex\": \"8955dd68b9a1468885aa5ad51efa42a89449e3feb6dafefdf268af1d5410648b\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c0a76f4\",\n      \"nonce_b64\": \"227a7d59c3d04211cf395217b93de6cb755dedb10b431cfcafcf151ebe00e116\",\n      \"sig_hex\": \"1f467f47cc880b2fd7e2bc76cb7be1e92a22e39d1b7f77deb538530d5c889662\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c0a95e3\",\n      \"nonce_b64\": \"a2505dc915f6d08036f26b67a3d3e7520af969cb1d0d620f45685b3eab1704be\",\n      \"sig_hex\": \"f9b427d24461ccd7c266597ec5d0a57d9ca49556a5c0428114dbe7fed600663d\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c0ab4d2\",\n      \"nonce_b64\": \"c76b8e6f807031c0435591a44b19743de570e9512e53a4c5f09f26e336f489c9\",\n      \"sig_hex\": \"2abc61ec7fd6a30a12baca53f037e91b56f069fa844e51151e389b0bcd4f68ea\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c0ad3c1\",\n      \"nonce_b64\": \"5a8df1a5a79269db5db03904f9e96526bde5aae0dc0ec3993d66418208dfb80f\",\n      \"sig_hex\": \"6c194e286173e81056cb1852b6765554e94e498f5581161279cf380c5c2770ee\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c0af2b0\",\n      \"nonce_b64\": \"c8eb0a83c3ddb1283e54e05bc4c5f9bedb2022b7ac4e09cb8a94d29c9acf91a4\",\n      \"sig_hex\": \"3ba922b91e718be029160f1e4093576bbe083aa8d679cb3349bb5ed52b5a41be\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c0b119f\",\n      \"nonce_b64\": \"b8ef31089a1a1b87b108eab1a2923f074401b67a1507201d12a5416aaeb07fe4\",\n      \"sig_hex\": \"47d89e4e638eb4584a8f1f19fb8577f7b1650f31a9e4dd8e4a21807729642c87\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c0b308e\",\n      \"nonce_b64\": \"d9b81641e8837165b56a7b6aac490a78fd9ec78d84df1c76459fde123ff109b2\",\n      \"sig_hex\": \"0f58e288d5a874c87f378394e6b8dab515a90d0105c6718411df789e4b159301\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c0b4f7d\",\n      \"nonce_b64\": \"4bcd8221b870df6d9d0a0b7ad6b6616bf38814f2cc37dab70414f9807b17d103\",\n      \"sig_hex\": \"4bf5fae79723fb2cf52acbab613187408e3ff513d2f28ed73b4f639d68f40dab\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c0b6e6c\",\n      \"nonce_b64\": \"1cc4d967d69d4f903b5c47e267edcf5fcaa81ff4077810ad169db823c4772499\",\n      \"sig_hex\": \"d2554f7209ee94640977efbab66c4ec1cbba43e78b301c46aa0e2477b0cf5515\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c0b8d5b\",\n      \"nonce_b64\": \"899b075238517c7557bee81e83dab619002c3c28ca694708788f215c581c7671\",\n      \"sig_hex\": \"6cbde1713a35a5055c3069e67c2e4954c8726607362e4e090adecd49681a377f\"\n    }\n  ]\n}"
+    },
+    {
+      "turn_id": 13,
+      "entry_id": "entry_013",
+      "role": "assistant",
+      "content": "样本 `webhook_2.json` 的随机哈希负载已确认。"
+    },
+    {
+      "turn_id": 14,
+      "entry_id": "entry_014",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c2_dump_3",
+          "name": "bash",
+          "arguments": "{\"command\": \"cat fixtures/webhook_3.json\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 15,
+      "entry_id": "entry_015",
+      "role": "tool",
+      "tool_call_id": "call_c2_dump_3",
+      "content": "{\n  \"batch_id\": \"b_203_00000000-0000-0000-0000-00000000012f\",\n  \"records\": [\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c197b45\",\n      \"nonce_b64\": \"1a315a03e072521f2f2152667b6fc559193883fc32136a5d16be746a83093a6d\",\n      \"sig_hex\": \"75b92cd98dabc0b4f448703bce4166db1cb2ce760bbdf2b2eee6767ac51bfbfe\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c199a34\",\n      \"nonce_b64\": \"b321b6cc8c7c3f32995bc2f525066c5e370c2aa10a5aa2c1d60c2503d2e46f36\",\n      \"sig_hex\": \"c1e080d0a2dc294dc4a23156c2390ed6d7c287e444f807437164d535259920ae\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c19b923\",\n      \"nonce_b64\": \"a1cf93e389a4f13e0bd616a55b9815d3e0909b5eb6a300a7f8b202e277078881\",\n      \"sig_hex\": \"78c737b2a1200bff4d465e36f2e992eb2f8c2e1459921c62630b3c3b18212daa\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c19d812\",\n      \"nonce_b64\": \"148bfc889c2b524da3133747b6cb64172f14dd29760454f0afd5df0bcaa3dca5\",\n      \"sig_hex\": \"cead4668f419e5e1d8e12394622b5604e574adb31c90101943407744eaa71684\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c19f701\",\n      \"nonce_b64\": \"385bc1e5a223ecd967bfceaebcc3369701400891a6e6076d81397f5434b24707\",\n      \"sig_hex\": \"ea95c83616ff40357b682b8e4cfb141438a5a4c732648ee2a30c46a33a99131c\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c1a15f0\",\n      \"nonce_b64\": \"62bf025bcc3bb0609f793f26821db292cd1b9b127e59d4c765cf0ec80f961aa8\",\n      \"sig_hex\": \"6ab4f3c8da887eb90a9bc4cdb6740452777bbc520db12702b8a937360c9e2e77\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c1a34df\",\n      \"nonce_b64\": \"98750d809ecd0bc9eac50b4e4768a2e48d6d55c77f8ada61def72de75dd0a9cc\",\n      \"sig_hex\": \"beccc16d3dc6ef1089f1794bd14480d255e1f391b6cbdc2c7d73fd23fd6a4d60\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c1a53ce\",\n      \"nonce_b64\": \"31ff177bf0630757af91b5a706ba5b1c82c5673dcec8239e2e8d2a368599a5df\",\n      \"sig_hex\": \"db43a150d9010c792236154c48b7bfbf33c6384d7884b7678640f18e32cd3dc2\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c1a72bd\",\n      \"nonce_b64\": \"7038468e9ee68aa5bf68a8266ebb200aed364ba629fef9af020efb800d989deb\",\n      \"sig_hex\": \"a10f7c8f4a4f4265768580b8bb6f793c76f6aed4633afac7ace853d276dad1c9\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c1a91ac\",\n      \"nonce_b64\": \"47a37e7732386cf19134ef3549c97ba37edcb1ae8655b04226c7b29a775e19b6\",\n      \"sig_hex\": \"5e2282a988b091ba7f9e006e0d627e30fd9158b86e26644f041b12ab91e1a20a\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c1ab09b\",\n      \"nonce_b64\": \"cd343b5ce939aa45a761db3e6fe3f478871b4670c0b7e20e9481e1430ef51cbe\",\n      \"sig_hex\": \"d6c32741ff0b995eee73886d7901a323debcae08ba39934bbacb78825c4d1c5c\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c1acf8a\",\n      \"nonce_b64\": \"a35f4c1eb1bb88c710387af7464e9815226d80aa32fdb4b2e228db2dd1398113\",\n      \"sig_hex\": \"e757afa03f30f7d005fa46d1efdc3342ce2a6f8fc241695a951304637960b241\"\n    }\n  ]\n}"
+    },
+    {
+      "turn_id": 16,
+      "entry_id": "entry_016",
+      "role": "assistant",
+      "content": "样本 `webhook_3.json` 的随机哈希负载已确认。"
+    },
+    {
+      "turn_id": 17,
+      "entry_id": "entry_017",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c2_dump_4",
+          "name": "bash",
+          "arguments": "{\"command\": \"cat fixtures/webhook_4.json\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 18,
+      "entry_id": "entry_018",
+      "role": "tool",
+      "tool_call_id": "call_c2_dump_4",
+      "content": "{\n  \"batch_id\": \"b_204_00000000-0000-0000-0000-000000000130\",\n  \"records\": [\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c28bd74\",\n      \"nonce_b64\": \"4926c524eb2af990e878b533ff5814d71de392ff5a79bb262daba215f3b98c12\",\n      \"sig_hex\": \"aa0bada26fda1ba59158d38a1203f203704723b35565397d131e4d96cb211cad\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c28dc63\",\n      \"nonce_b64\": \"844db61969c94221509b47c32a1586d0decafcee3ec9806dcb01a5abab0c407a\",\n      \"sig_hex\": \"aaf9fb6521f14114c505c5973f5a80df4b6a2790962a54595b27d3e6a36ccc2e\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c28fb52\",\n      \"nonce_b64\": \"d93fd04e5e4f569abf034d149b750526c111384d2e8ad16aed3cc3b2f170d6ba\",\n      \"sig_hex\": \"5ea430fd23ac78b12ffa30e43dd63be820791ff1cff9689b3e3862c020b47abd\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c291a41\",\n      \"nonce_b64\": \"c5589f53c770d094fe4a634afe5b796ebc55972ee610c842684ae4fff897189d\",\n      \"sig_hex\": \"bb3c7a2fda49a1d7d3b14fbac0f602a79100f97ca3c3d15a4bd10c86c7a43e7a\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c293930\",\n      \"nonce_b64\": \"d34c6d3ef1a4e1c4107bb6829fdc6745ee0ee849f4a9a3e4ab233a65adde8573\",\n      \"sig_hex\": \"6daf114dd90e7075733c51fdd58459f4d643e69b03c7e8dc15e7905a990970c0\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c29581f\",\n      \"nonce_b64\": \"3b1fdae599b25969bf5b410312e241bdbc9bb3aed888198f915fe36b428d555a\",\n      \"sig_hex\": \"a0066b1ba1df1625c48b4dfde929401704cd7d67093f3fb3040cb826e25fcf14\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c29770e\",\n      \"nonce_b64\": \"62974a58c65bbccb5cf3da28ea3faedeb3b34976a1f326668610993c82f6d443\",\n      \"sig_hex\": \"51fa50a31beb574dfb009756007c9a28c6071adddd3f031ff2c74053748b61f0\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c2995fd\",\n      \"nonce_b64\": \"4fa4396e0e17c313b02ba14628789412a762531c5695a3b8e0ffe60afe1e2562\",\n      \"sig_hex\": \"7d242caa855e98cca2c04cab18a1c36d7e781eb5f97a68cc208a2ffb7626acd0\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c29b4ec\",\n      \"nonce_b64\": \"ba84e6f1cd5a7902b439a48eecb07a922f14586468cd4cffda6f353712659a19\",\n      \"sig_hex\": \"ac873941e60e8ccd2af25f93d84929bece0aa28401a7d6e72b4cd65662c90f11\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c29d3db\",\n      \"nonce_b64\": \"7200b5a72f86010e84ac01ce2f52448431604b4e649accb607e14ba03786f7e5\",\n      \"sig_hex\": \"68c87a8411a804a972995eb60c99dae5bf90dc536e8e73c4785a474cfa9672df\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c29f2ca\",\n      \"nonce_b64\": \"bc1cbd988dbb1b5b282c865aa560f5f96d29c04cd325b03755b94697f78d272c\",\n      \"sig_hex\": \"e68ab60dcbc417d893fdbc87c9cc5e44e7fdb1fbffa04650459c9c02b5ae8234\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c2a11b9\",\n      \"nonce_b64\": \"a760d19e73cbc6850a88e34c35b2183294f40b5af7ab00ca75aec9d073819a11\",\n      \"sig_hex\": \"62f3bb113a6abf40bfae48e7a196527bf4678ece3c29a062c59d9e067858b1c3\"\n    }\n  ]\n}"
+    },
+    {
+      "turn_id": 19,
+      "entry_id": "entry_019",
+      "role": "assistant",
+      "content": "样本 `webhook_4.json` 的随机哈希负载已确认。"
+    },
+    {
+      "turn_id": 20,
+      "entry_id": "entry_020",
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_c2_dump_5",
+          "name": "bash",
+          "arguments": "{\"command\": \"cat fixtures/webhook_5.json\"}"
+        }
+      ]
+    },
+    {
+      "turn_id": 21,
+      "entry_id": "entry_021",
+      "role": "tool",
+      "tool_call_id": "call_c2_dump_5",
+      "content": "{\n  \"batch_id\": \"b_205_00000000-0000-0000-0000-000000000131\",\n  \"records\": [\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c37ffa3\",\n      \"nonce_b64\": \"09a3794fb8e2ae65d980527ac57e9fea6802fc18c31ad3f3e2f5ddc2042e5a6c\",\n      \"sig_hex\": \"5b96008d2dc8bc022a19e3da0c5a5f86d5c0fd0004cc9966ebf8e0c44f0d925d\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c381e92\",\n      \"nonce_b64\": \"44d12b2a8524f796da034173a212e96122e8381381e2898ca347c45527fac283\",\n      \"sig_hex\": \"c4905ec262067e076c7b5e006bcc672d1c2bd3f7842f0f8c18a2abc9cec8b5e7\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c383d81\",\n      \"nonce_b64\": \"55236d1d8d5314095d80c9f7020b0c7ec19939538e5152f3bee4d43903b2e99a\",\n      \"sig_hex\": \"5319dc83ee3e30e1a513f227b7c3bb8d0bed8f2d848565d4777102f1f7d832b8\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c385c70\",\n      \"nonce_b64\": \"5d6df1eb8a23da53adf1005819dcf6abdbcb7c8495c8c171e773ca08f688644e\",\n      \"sig_hex\": \"3df52a269e35081d86d07687a1be09b5428d9b6c14b38dc87bfd2db49672f4da\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c387b5f\",\n      \"nonce_b64\": \"2292c0304c34dd4a750c974ee8c451bd437c29f046170951151f36f2040d5d67\",\n      \"sig_hex\": \"96962ced8ce97fa21c58e1c4da96eab523bc3d8974c2c5613b353f10fd58c16c\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c389a4e\",\n      \"nonce_b64\": \"d90412ce5365a4662d4f2cbfb0397154144a37352fa7aa5f2218272228db1ad9\",\n      \"sig_hex\": \"c46879c1d87dd220ce9531bdd938f1b8b849c71509019fa34a49706338ea1c1a\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c38b93d\",\n      \"nonce_b64\": \"eb23b4f7b1efb656ff8bdfe9d0130d2d45af9915156a8c2e81d418f3fc450fd2\",\n      \"sig_hex\": \"61f2ea6fcf35f18e0a194e42e9ec61927d9decc28a7c13bf699b3ddcbb2725a5\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c38d82c\",\n      \"nonce_b64\": \"fbdfe9bbfc02dd767f95b0ea52a675952ac0f513a7b5233bcbfb0e5df3f088d3\",\n      \"sig_hex\": \"323d87a57ee46a50a53b97b3c0455cd79b79c1d2ef7631fa1921231dad939f72\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c38f71b\",\n      \"nonce_b64\": \"3482edc0d4a22ff7fd1f9430cb62d9e50d75536aad1acd7d258c0592f61647f3\",\n      \"sig_hex\": \"4217e2a2891a6a661fd1d14fd102565d211faa8e46b5f06d96c86717c895dc30\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c39160a\",\n      \"nonce_b64\": \"bc0ec02be52dbc168b48149db27e152c1bec67a8e7243787192f9c317910eeb6\",\n      \"sig_hex\": \"f0fd282bcf0e8252a5c1d00226da1bccd40b4ad904f74a296a95e07da1c9099f\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c3934f9\",\n      \"nonce_b64\": \"33cf7869990b3db49f2e6f1bdfe17ca5633f0b480b09d1ad6dc31a36dee48914\",\n      \"sig_hex\": \"ec2e68d029fff37c6fe7c7053d3193a7b1f89478a90455e992d8a0e87e455492\"\n    },\n    {\n      \"event_uuid\": \"00000000-0000-0000-0000-00000c3953e8\",\n      \"nonce_b64\": \"42c93eae77af977a0c9172d79ab5e416b0d8e421827743874e7b2a865e4134cc\",\n      \"sig_hex\": \"1a79ca977505d921b553b0423a73e4593d27083d451d4c2c3a44c586f365cc3e\"\n    }\n  ]\n}"
+    },
+    {
+      "turn_id": 22,
+      "entry_id": "entry_022",
+      "role": "assistant",
+      "content": "样本 `webhook_5.json` 的随机哈希负载已确认。"
+    },
+    {
+      "turn_id": 23,
+      "entry_id": "entry_023",
+      "role": "user",
+      "content": "再确认一次刚才第 1 批测试样本的 HTTP 状态码是不是都是 200？"
+    },
+    {
+      "turn_id": 24,
+      "entry_id": "entry_024",
+      "role": "assistant",
+      "content": "确认第 1 批样本返回状态码均为 200。"
+    },
+    {
+      "turn_id": 25,
+      "entry_id": "entry_025",
+      "role": "user",
+      "content": "再确认一次刚才第 2 批测试样本的 HTTP 状态码是不是都是 200？"
+    },
+    {
+      "turn_id": 26,
+      "entry_id": "entry_026",
+      "role": "assistant",
+      "content": "确认第 2 批样本返回状态码均为 200。"
+    },
+    {
+      "turn_id": 27,
+      "entry_id": "entry_027",
+      "role": "user",
+      "content": "再确认一次刚才第 3 批测试样本的 HTTP 状态码是不是都是 200？"
+    },
+    {
+      "turn_id": 28,
+      "entry_id": "entry_028",
+      "role": "assistant",
+      "content": "确认第 3 批样本返回状态码均为 200。"
+    },
+    {
+      "turn_id": 29,
+      "entry_id": "entry_029",
+      "role": "user",
+      "content": "再确认一次刚才第 4 批测试样本的 HTTP 状态码是不是都是 200？"
+    },
+    {
+      "turn_id": 30,
+      "entry_id": "entry_030",
+      "role": "assistant",
+      "content": "确认第 4 批样本返回状态码均为 200。"
+    },
+    {
+      "turn_id": 31,
+      "entry_id": "entry_031",
+      "role": "user",
+      "content": "再确认一次刚才第 5 批测试样本的 HTTP 状态码是不是都是 200？"
+    },
+    {
+      "turn_id": 32,
+      "entry_id": "entry_032",
+      "role": "assistant",
+      "content": "确认第 5 批样本返回状态码均为 200。"
+    },
+    {
+      "turn_id": 33,
+      "entry_id": "entry_033",
+      "role": "user",
+      "content": "再确认一次刚才第 6 批测试样本的 HTTP 状态码是不是都是 200？"
+    },
+    {
+      "turn_id": 34,
+      "entry_id": "entry_034",
+      "role": "assistant",
+      "content": "确认第 6 批样本返回状态码均为 200。"
+    }
+  ],
+  "eval_probes": [
+    {
+      "probe_id": "probe_c2",
+      "at_turn": 34,
+      "query": "现在给我写出 `ComputeWebhookSig(body map[string]any, secret string)` 的完整预处理与加签逻辑。",
+      "required_evidence_entry_ids": [
+        "entry_003"
+      ],
+      "forbidden_superseded_entry_ids": [],
+      "expected_rubric": [
+        "代码或说明中明确先剔除/跳过顶层 trace_id 字段",
+        "对剩余 key 按 ASCII 字典序升序排序拼接后再计算 HMAC-SHA256"
+      ]
+    }
+  ]
+}
