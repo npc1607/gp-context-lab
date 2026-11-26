@@ -32,6 +32,7 @@ func main() {
 		etaFlag         = flag.Float64("eta", 0.50, "token-cost normalization exponent eta")
 		decayFlag       = flag.Float64("decay", 0.50, "ACT-R power-law decay exponent d")
 		epochFlag       = flag.Int("epoch", 8, "epoch stride for frozen observation masking in E4")
+		wsFloorFlag     = flag.Float64("ws-floor", 0.65, "minimum fraction of token_budget reserved for WorkingSet")
 		epochsSweep     = flag.String("epochs", "", "optional comma-separated epoch curve sweep (e.g. 8,12,16,24,32)")
 		calibratePath   = flag.String("calibrate-e2e", "", "optional path to e2e JSON report to calibrate tokenizer vs real API input_tokens")
 		outPath         = flag.String("out", "", "optional JSON report output path")
@@ -54,6 +55,7 @@ func main() {
 	cfg.Eta = *etaFlag
 	cfg.ACTRDecay = *decayFlag
 	cfg.Epoch = *epochFlag
+	cfg.WorkingSetFloorRatio = *wsFloorFlag
 	cfg.BaseToolsTokens = *baseToolsTokens
 	if strings.EqualFold(*extractorFlag, string(index.ModeOracle)) {
 		cfg.ExtractorMode = index.ModeOracle

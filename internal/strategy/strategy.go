@@ -65,23 +65,25 @@ type Config struct {
 	ACTRDecay       float64 // ACT-R power-law exponent d (default 0.5)
 	Epoch           int     // Epoch-frozen observation masking stride (default 8)
 	RecentWindow    int     // Recent verbatim turns kept outside working set (default 4)
-	BaseToolsTokens int     // Synthetic base system/tools schema tokens (e.g., 0 or 1024)
-	DegreeBeta      float64 // Hub degree penalty beta (default 0.4)
+	BaseToolsTokens      int     // Synthetic base system/tools schema tokens (e.g., 0 or 1024)
+	DegreeBeta           float64 // Hub degree penalty beta (default 0.4)
+	WorkingSetFloorRatio float64 // Minimum fraction of tokenBudget guaranteed for WorkingSet (default 0.65)
 }
 
 // DefaultConfig returns calibrated default hyperparameters from docs/02 and docs/04.
 func DefaultConfig() Config {
 	return Config{
-		ExtractorMode:   index.ModeHeuristic,
-		Alpha:           0.75,
-		HeatT:           3.0,
-		Lambda:          0.6,
-		Eta:             0.5,
-		ACTRDecay:       0.5,
-		Epoch:           8,
-		RecentWindow:    4,
-		BaseToolsTokens: 0,
-		DegreeBeta:      0.4,
+		ExtractorMode:        index.ModeHeuristic,
+		Alpha:                0.75,
+		HeatT:                3.0,
+		Lambda:               0.6,
+		Eta:                  0.5,
+		ACTRDecay:            0.5,
+		Epoch:                8,
+		RecentWindow:         4,
+		BaseToolsTokens:      0,
+		DegreeBeta:           0.4,
+		WorkingSetFloorRatio: 0.65,
 	}
 }
 

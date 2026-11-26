@@ -105,3 +105,49 @@ func TestHonestB1PreservesFullLinesAndMutatesSlidingPrefix(t *testing.T) {
 		t.Fatalf("expected honest B1 compaction to preserve full user constraint text, got:\n%s", joined)
 	}
 }
+
+func TestE4AWorkingSetBudgetFloorPreventsStarvation(t *testing.T) {
+	cfg := strategy.DefaultConfig()
+	cfg.Epoch = 16
+	cfg.RecentWindow = 4
+	cfg.WorkingSetFloorRatio = 0.65
+
+	s := strategy.NewE4A(cfg)
+	s.Reset("You are gp.", 1000)
+
+	// Turn 1: early critical decision that must be recalled.
+	if err := s.OnTurn(dataset.Turn{
+		TurnID: 1, EntryID: "e_early", Role: "user",
+		Content: "critical constraint: proto slot 12 is permanently frozen in audit_meta.proto",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	// Turns 2..20: fill Epoch 1 with large tool outputs so recentTokens exceeds 900.
+	bigTool := strings.Repeat("verbose routine output line from check_runner\n", 18)
+	for tid := 2; tid <= 20; tid++ {
+		if err := s.OnTurn(dataset.Turn{
+			TurnID: tid, EntryID: "e_pad_" + string(rune('a'+tid-2)), Role: "tool",
+			ToolCallID: "c", Content: bigTool,
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	asm, _, err := s.BuildPrompt("which proto slot is frozen in audit_meta.proto?", 20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if asm.WorkingSetTokens == 0 {
+		t.Fatalf("expected non-zero WorkingSetTokens under budget floor even when recent window is full, got 0")
+	}
+	foundEarly := false
+	for _, id := range asm.SelectedEntryIDs {
+		if id == "e_early" {
+			foundEarly = true
+			break
+		}
+	}
+	if !foundEarly {
+		t.Fatalf("expected e_early to be recalled with WorkingSet budget floor, got %v", asm.SelectedEntryIDs)
+	}
+}

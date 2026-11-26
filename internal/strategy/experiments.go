@@ -336,9 +336,15 @@ func (s *ExperimentalStrategy) BuildPrompt(query string, atTurn int) (PromptAsse
 	}
 
 	// 4. Select diverse subset within recall budget (E4 reuses working set during continuation steps inside the same Epoch).
+	// Guarantee a smooth WorkingSet budget floor so wide EpochRecentWindows do not starve multi-hop recall.
+	floorRatio := s.cfg.WorkingSetFloorRatio
+	if floorRatio <= 0 || floorRatio > 1.0 {
+		floorRatio = 0.65
+	}
+	minRecallBudget := int(float64(s.tokenBudget) * floorRatio)
 	recallBudget := s.tokenBudget - ledgerToks - recentTokens
-	if recallBudget < 160 {
-		recallBudget = s.tokenBudget / 2
+	if recallBudget < minRecallBudget {
+		recallBudget = minRecallBudget
 	}
 	curEpoch := 0
 	if s.cfg.Epoch > 0 && n > 0 {
