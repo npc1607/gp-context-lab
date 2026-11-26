@@ -76,8 +76,9 @@ func WeightedRRF(signals [][]float64, weights []float64, k float64) []float64 {
 	return NormalizeMinMax(out)
 }
 
-// ZlibDensityPenalty computes rho(d_i) in (0.15, 1.0] to penalize repetitive logs,
-// boilerplate acknowledgments, and ultra-long repetitive hex/UUID dumps.
+// ZlibDensityPenalty computes rho(d_i) in [0.15, 1.0] to penalize repetitive logs,
+// boilerplate acknowledgments, and ultra-long repetitive hex/UUID dumps while preserving
+// structured multi-line code, diffs, and JSON schemas.
 func ZlibDensityPenalty(text string) float64 {
 	trimmed := strings.TrimSpace(text)
 	if trimmed == "" {
@@ -95,20 +96,45 @@ func ZlibDensityPenalty(text string) float64 {
 	_ = zw.Close()
 
 	compRatio := float64(buf.Len()) / float64(len(trimmed))
-	// Check unique token ratio to catch repetitive stack traces / UUID arrays.
+	// Strip structural punctuation before counting unique tokens so JSON/Go braces do not skew diversity.
 	fields := strings.Fields(trimmed)
-	uniq := make(map[string]struct{}, len(fields))
+	uniqToks := make(map[string]struct{}, len(fields))
+	nonPunctCount := 0
 	for _, f := range fields {
-		uniq[f] = struct{}{}
+		tok := strings.Trim(f, "{}[](),;:|\"'`")
+		if tok == "" {
+			continue
+		}
+		nonPunctCount++
+		uniqToks[tok] = struct{}{}
 	}
-	uniqRatio := 1.0
-	if len(fields) > 0 {
-		uniqRatio = float64(len(uniq)) / float64(len(fields))
+	uniqTokRatio := 1.0
+	if nonPunctCount > 0 {
+		uniqTokRatio = float64(len(uniqToks)) / float64(nonPunctCount)
 	}
 
-	// Penalize highly compressible boilerplate (low compRatio) and massive hex/UUID tables.
-	rho := 0.5*math.Min(1.0, compRatio*1.35) + 0.5*math.Min(1.0, uniqRatio*1.2)
-	if len(trimmed) > 1200 && uniqRatio < 0.55 {
+	divRatio := uniqTokRatio
+	rawLines := strings.Split(trimmed, "\n")
+	uniqLines := make(map[string]struct{}, len(rawLines))
+	nonEmptyLines := 0
+	for _, ln := range rawLines {
+		t := strings.TrimSpace(ln)
+		if t == "" {
+			continue
+		}
+		nonEmptyLines++
+		uniqLines[t] = struct{}{}
+	}
+	if nonEmptyLines >= 6 {
+		uniqLineRatio := float64(len(uniqLines)) / float64(nonEmptyLines)
+		divRatio = 0.5*uniqTokRatio + 0.5*uniqLineRatio
+	}
+
+	// Structured code/JSON naturally zlib-compresses to ~0.25-0.42; repeated log spam drops < 0.16.
+	compTerm := math.Min(1.0, compRatio*2.4)
+	divTerm := math.Min(1.0, divRatio*1.25)
+	rho := 0.5*compTerm + 0.5*divTerm
+	if len(trimmed) > 1200 && (compRatio < 0.16 || divRatio < 0.35) {
 		rho *= 0.45
 	}
 	if rho < 0.15 {

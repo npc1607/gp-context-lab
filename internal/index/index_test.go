@@ -42,3 +42,22 @@ func TestHeuristicExtractorExtractsPathsAndCamelSymbols(t *testing.T) {
 		}
 	}
 }
+
+func TestGraphCountMatchedEntities(t *testing.T) {
+	g := index.NewGraph()
+	ext := index.HeuristicExtractor{}
+	turn := dataset.Turn{
+		TurnID:  1,
+		EntryID: "e1",
+		Role:    "tool",
+		Content: "internal/biz/job_batch.go defines PrecheckBatchModifyJobs",
+	}
+	g.AddTurn(0, turn, ext.ExtractTurn(turn), nil)
+
+	if got := g.CountMatchedEntities(ext.ExtractQuery("完全无关的纯中文提问")); got != 0 {
+		t.Fatalf("expected 0 matched entities for non-matching query, got %d", got)
+	}
+	if got := g.CountMatchedEntities(ext.ExtractQuery("check PrecheckBatchModifyJobs in internal/biz/job_batch.go")); got == 0 {
+		t.Fatalf("expected >0 matched entities for matching symbol/path query")
+	}
+}

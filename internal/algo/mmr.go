@@ -75,9 +75,9 @@ func SelectBudgetedMMR(cands []Candidate, budget int, lambda, eta float64) []Can
 			if used[i] || c.Tokens <= 0 || c.Tokens > rem {
 				continue
 			}
-			// Floor token normalization at 64 so short 10-token boilerplate does not unfairly outscore ~80-token code files,
-			// while oversized 500+ token log dumps are still penalized by c_i^eta.
-			costNorm := math.Pow(math.Max(64.0, float64(c.Tokens)), eta)
+			// Floor token normalization at 256 so short conversational chatter does not exploit c_i^-eta
+			// to outscore medium code/tool turns, while multi-thousand-token dumps are still penalized by c_i^eta.
+			costNorm := math.Pow(math.Max(256.0, float64(c.Tokens)), eta)
 			marginal := lambda*c.Weight - (1.0-lambda)*maxSimToSel[i]
 			score := marginal / costNorm
 			if score > bestScore {

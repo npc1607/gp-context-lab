@@ -28,7 +28,7 @@ func main() {
 		cacheMinTokens  = flag.Int("cache-min-tokens", 1024, "minimum prefix length threshold for Prompt Caching")
 		baseToolsTokens = flag.Int("base-tools-tokens", 1024, "synthetic system/tools schema prefix tokens")
 		alphaFlag       = flag.Float64("alpha", 0.75, "PPR damping/teleport parameter alpha")
-		lambdaFlag      = flag.Float64("lambda", 0.60, "MMR relevance-diversity tradeoff lambda")
+		lambdaFlag      = flag.Float64("lambda", 0.70, "MMR relevance-diversity tradeoff lambda")
 		etaFlag         = flag.Float64("eta", 0.50, "token-cost normalization exponent eta")
 		decayFlag       = flag.Float64("decay", 0.50, "ACT-R power-law decay exponent d")
 		epochFlag       = flag.Int("epoch", 8, "epoch stride for frozen observation masking in E4")

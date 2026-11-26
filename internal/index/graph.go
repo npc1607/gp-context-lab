@@ -125,6 +125,17 @@ func (g *Graph) AddTurn(turnIdx int, turn dataset.Turn, entities []string, vec [
 	return msgNode
 }
 
+// CountMatchedEntities returns how many query entities exist in the graph index.
+func (g *Graph) CountMatchedEntities(queryEntities []string) int {
+	cnt := 0
+	for _, e := range queryEntities {
+		if _, ok := g.EntToNode[e]; ok {
+			cnt++
+		}
+	}
+	return cnt
+}
+
 // BuildSeedDistribution constructs a normalized personalization vector q over graph nodes
 // from query entities and recent active messages.
 func (g *Graph) BuildSeedDistribution(queryEntities []string, recentTurnIdxs []int) []float64 {
@@ -145,11 +156,11 @@ func (g *Graph) BuildSeedDistribution(queryEntities []string, recentTurnIdxs []i
 			matchedEntities++
 		}
 	}
-	// Only fall back to recency message seeds if query extracted no graph entities,
-	// or add a very small prior so unrelated recent turns do not overshadow entity seeds.
+	// Keep recency seed small even if no query entities matched, so adjacent recency edges
+	// do not swamp BM25/Dense semantic matches across the full history.
 	recencyScale := 0.02
 	if matchedEntities == 0 {
-		recencyScale = 0.25
+		recencyScale = 0.05
 	}
 	for i, tidx := range recentTurnIdxs {
 		if id, ok := g.MsgToNode[tidx]; ok {

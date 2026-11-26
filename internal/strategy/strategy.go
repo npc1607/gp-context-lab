@@ -60,7 +60,7 @@ type Config struct {
 	ExtractorMode   index.ExtractorMode
 	Alpha           float64 // PPR teleport/damping (default 0.75)
 	HeatT           float64 // Heat kernel diffusion time (default 3.0)
-	Lambda          float64 // MMR relevance vs diversity tradeoff (default 0.6)
+	Lambda          float64 // MMR relevance vs diversity tradeoff (default 0.7)
 	Eta             float64 // Token cost exponent (default 0.5)
 	ACTRDecay       float64 // ACT-R power-law exponent d (default 0.5)
 	Epoch           int     // Epoch-frozen observation masking stride (default 8)
@@ -76,7 +76,7 @@ func DefaultConfig() Config {
 		ExtractorMode:        index.ModeHeuristic,
 		Alpha:                0.75,
 		HeatT:                3.0,
-		Lambda:               0.6,
+		Lambda:               0.70,
 		Eta:                  0.5,
 		ACTRDecay:            0.5,
 		Epoch:                8,

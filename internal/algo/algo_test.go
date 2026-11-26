@@ -84,6 +84,27 @@ func TestZlibDensityPenalizesRepeatedBoilerplate(t *testing.T) {
 	if algo.ZlibDensityPenalty(conciseRule) <= algo.ZlibDensityPenalty(longNoise) {
 		t.Fatalf("expected concise rule density > repeated panic dump density")
 	}
+	structuredJSON := `{
+  "name": "im_pins_create",
+  "description": "Pin a message in group chat",
+  "inputSchema": {
+    "type": "object",
+    "required": ["message_id", "chat_id"],
+    "properties": {
+      "message_id": {"type": "string", "description": "Target message identifier"},
+      "chat_id": {"type": "string", "description": "Feishu group chat identifier"},
+      "reason": {"type": "string", "description": "Audit note for pin action"}
+    }
+  }
+}`
+	longStructured := structuredJSON + "\n// extra context: BatchModifyJobs validates CanEditJobForUpdate and IsCrossTenantPublicJob in internal/biz/job_batch.go\n" +
+		"// secondary rule: PrecheckBatchModifyJobs enforces tenant isolation and stop_condition bounds\n"
+	if rho := algo.ZlibDensityPenalty(longStructured); rho < 0.65 {
+		t.Fatalf("expected structured JSON/code snippet not to be over-penalized, got rho=%f", rho)
+	}
+	if rhoNoise := algo.ZlibDensityPenalty(longNoise); rhoNoise > 0.25 {
+		t.Fatalf("expected repeated log spam to remain strongly penalized, got rho=%f", rhoNoise)
+	}
 	if math.IsNaN(algo.UnigramSurprisal(longNoise)) {
 		t.Fatalf("unexpected NaN surprisal")
 	}

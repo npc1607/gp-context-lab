@@ -175,6 +175,7 @@ func (s *ExperimentalStrategy) BuildPrompt(query string, atTurn int) (PromptAsse
 	var recentBuf strings.Builder
 	recentTokens := 0
 	var recentIDs []string
+	inRecentVerbatim := make([]bool, n)
 	if s.variant.useEpochMask && s.cfg.Epoch > 1 {
 		// In Epoch-frozen mode, keep an append-only block from the latest epoch checkpoint
 		// (frozen older tool outputs in prior epochs stay masked; current epoch stays verbatim).
@@ -198,6 +199,7 @@ func (s *ExperimentalStrategy) BuildPrompt(query string, atTurn int) (PromptAsse
 			recentBuf.WriteString(line)
 			recentTokens += tokenizer.Count(line)
 			if override == "" {
+				inRecentVerbatim[i] = true
 				recentIDs = append(recentIDs, st.turn.EntryID)
 			}
 		}
@@ -206,6 +208,7 @@ func (s *ExperimentalStrategy) BuildPrompt(query string, atTurn int) (PromptAsse
 			line := formatTurn(s.turns[i].turn, "")
 			recentBuf.WriteString(line)
 			recentTokens += s.turns[i].tokens
+			inRecentVerbatim[i] = true
 			recentIDs = append(recentIDs, s.turns[i].turn.EntryID)
 		}
 	}
@@ -226,126 +229,6 @@ func (s *ExperimentalStrategy) BuildPrompt(query string, atTurn int) (PromptAsse
 		supersededSet = s.ctxLedger.SupersededEntryIDs()
 	}
 
-	// 3. Score historical candidate turns before recentStart.
-	qVec := s.embedder.Embed(query)
-	denseScores := make([]float64, n)
-	for i := 0; i < n; i++ {
-		denseScores[i] = math.Max(0, index.Cosine(qVec, s.turns[i].vec))
-	}
-
-	var bm25Norm []float64
-	if s.variant.useBM25 {
-		bm25Norm = algo.NormalizeMinMax(s.bm25.Score(query))
-	}
-
-	var graphNorm []float64
-	if s.variant.useGraph {
-		qEnts := s.entExt.ExtractQuery(query)
-		recentIdxs := make([]int, 0, n-recentStart)
-		for i := n - 1; i >= recentStart; i-- {
-			recentIdxs = append(recentIdxs, i)
-		}
-		seed := s.graph.BuildSeedDistribution(qEnts, recentIdxs)
-		var diffused []float64
-		if s.variant.useHeat {
-			diffused = algo.HeatKernel(s.graph, seed, s.cfg.HeatT, 8, s.cfg.DegreeBeta)
-		} else {
-			diffused = algo.PersonalizedPageRank(s.graph, seed, s.cfg.Alpha, 20, s.cfg.DegreeBeta)
-		}
-		graphNorm = algo.NormalizeMinMax(s.graph.ProjectMessageScores(diffused, 120.0))
-	}
-
-	var rrfScores []float64
-	if s.variant.useGraph || s.variant.useBM25 {
-		signals := [][]float64{algo.NormalizeMinMax(denseScores)}
-		weights := []float64{0.25}
-		if s.variant.useBM25 {
-			signals = append(signals, bm25Norm)
-			weights = append(weights, 0.35)
-		}
-		if s.variant.useGraph {
-			signals = append(signals, graphNorm)
-			weights = append(weights, 0.55)
-		}
-		rrfScores = algo.WeightedRRF(signals, weights, 15.0)
-	}
-
-	// Compute max entropy for E5 negative control normalization.
-	maxEntropy := 1.0
-	if s.variant.useSurprisal {
-		maxEntropy = 1e-6
-		for i := 0; i < recentStart; i++ {
-			if s.turns[i].entropy > maxEntropy {
-				maxEntropy = s.turns[i].entropy
-			}
-		}
-	}
-
-	cands := make([]algo.Candidate, 0, recentStart)
-	for i := 0; i < recentStart; i++ {
-		st := s.turns[i]
-		// E3/E4 suppresses entries belonging to superseded constraints from working-set recall.
-		if s.variant.useLedger {
-			if _, isSup := supersededSet[st.turn.EntryID]; isSup {
-				continue
-			}
-		}
-
-		var w float64
-		if s.variant.useSurprisal {
-			// Negative control E5: raw surprisal dominates candidate ranking (demonstrating high-entropy noise takeover).
-			w = st.entropy / maxEntropy
-		} else if s.variant.useGraph || s.variant.useBM25 {
-			baseRel := 0.20*denseScores[i] + 0.35*bm25Norm[i] + 0.45*graphNorm[i]
-			if len(rrfScores) == n {
-				baseRel = 0.55*baseRel + 0.45*rrfScores[i]
-			}
-			timeW := 1.0
-			if s.variant.useACTR {
-				timeW = s.actr.TimeWeight(i, atTurn)
-			}
-			w = (0.3 + 0.7*timeW) * st.density * baseRel
-		} else {
-			// E1 (MMR / k-DPP over pure dense similarity).
-			w = denseScores[i]
-		}
-
-		cands = append(cands, algo.Candidate{
-			TurnIdx:  i,
-			EntryID:  st.turn.EntryID,
-			Weight:   w,
-			Tokens:   st.tokens,
-			Vec:      st.vec,
-			Entities: st.entSet,
-		})
-	}
-
-	// Two-stage candidate truncation to N <= 200 and min-max normalize weights into [0, 1]
-	// so MMR relevance vs redundancy trade-off is scale-invariant.
-	sort.Slice(cands, func(i, j int) bool {
-		return cands[i].Weight > cands[j].Weight
-	})
-	if len(cands) > 200 {
-		cands = cands[:200]
-	}
-	if len(cands) > 0 && cands[0].Weight > 0 {
-		maxW := cands[0].Weight
-		for i := range cands {
-			cands[i].Weight /= maxW
-		}
-	}
-
-	// 4. Select diverse subset within recall budget (E4 reuses working set during continuation steps inside the same Epoch).
-	// Guarantee a smooth WorkingSet budget floor so wide EpochRecentWindows do not starve multi-hop recall.
-	floorRatio := s.cfg.WorkingSetFloorRatio
-	if floorRatio <= 0 || floorRatio > 1.0 {
-		floorRatio = 0.65
-	}
-	minRecallBudget := int(float64(s.tokenBudget) * floorRatio)
-	recallBudget := s.tokenBudget - ledgerToks - recentTokens
-	if recallBudget < minRecallBudget {
-		recallBudget = minRecallBudget
-	}
 	curEpoch := 0
 	if s.cfg.Epoch > 0 && n > 0 {
 		curEpoch = (n - 1) / s.cfg.Epoch
@@ -358,6 +241,157 @@ func (s *ExperimentalStrategy) BuildPrompt(query string, atTurn int) (PromptAsse
 		wsText = s.lastWSText
 		wsToks = s.lastWSToks
 	} else {
+		// 3. Score historical candidate turns not verbatim in SegRecentWindow.
+		qVec := s.embedder.Embed(query)
+		denseScores := make([]float64, n)
+		for i := 0; i < n; i++ {
+			denseScores[i] = math.Max(0, index.Cosine(qVec, s.turns[i].vec))
+		}
+
+		var bm25Norm []float64
+		if s.variant.useBM25 {
+			bm25Norm = algo.NormalizeMinMax(s.bm25.Score(query))
+		}
+
+		var graphNorm []float64
+		hasQueryEntities := false
+		if s.variant.useGraph {
+			qEnts := s.entExt.ExtractQuery(query)
+			hasQueryEntities = s.graph.CountMatchedEntities(qEnts) > 0
+			seedStart := n - s.cfg.RecentWindow
+			if seedStart < 0 {
+				seedStart = 0
+			}
+			recentIdxs := make([]int, 0, n-seedStart)
+			for i := n - 1; i >= seedStart; i-- {
+				recentIdxs = append(recentIdxs, i)
+			}
+			seed := s.graph.BuildSeedDistribution(qEnts, recentIdxs)
+			var diffused []float64
+			if s.variant.useHeat {
+				diffused = algo.HeatKernel(s.graph, seed, s.cfg.HeatT, 8, s.cfg.DegreeBeta)
+			} else {
+				diffused = algo.PersonalizedPageRank(s.graph, seed, s.cfg.Alpha, 20, s.cfg.DegreeBeta)
+			}
+			graphNorm = algo.NormalizeMinMax(s.graph.ProjectMessageScores(diffused, 120.0))
+		}
+
+		var rrfScores []float64
+		if s.variant.useGraph || s.variant.useBM25 {
+			signals := [][]float64{algo.NormalizeMinMax(denseScores)}
+			weights := []float64{0.25}
+			if s.variant.useBM25 {
+				signals = append(signals, bm25Norm)
+				if !s.variant.useGraph || hasQueryEntities {
+					weights = append(weights, 0.35)
+				} else {
+					weights = append(weights, 0.60)
+				}
+			}
+			if s.variant.useGraph {
+				signals = append(signals, graphNorm)
+				if hasQueryEntities {
+					weights = append(weights, 0.55)
+				} else {
+					// Without explicit query entities, keep recent-seeded PPR as a mild tiebreaker.
+					weights = append(weights, 0.15)
+				}
+			}
+			rrfScores = algo.WeightedRRF(signals, weights, 15.0)
+		}
+
+		// Compute max entropy for E5 negative control normalization.
+		maxEntropy := 1.0
+		if s.variant.useSurprisal {
+			maxEntropy = 1e-6
+			for i := 0; i < n; i++ {
+				if inRecentVerbatim[i] {
+					continue
+				}
+				if s.turns[i].entropy > maxEntropy {
+					maxEntropy = s.turns[i].entropy
+				}
+			}
+		}
+
+		cands := make([]algo.Candidate, 0, n)
+		for i := 0; i < n; i++ {
+			if inRecentVerbatim[i] {
+				continue
+			}
+			st := s.turns[i]
+			// E3/E4 suppresses entries belonging to superseded constraints from working-set recall.
+			if s.variant.useLedger {
+				if _, isSup := supersededSet[st.turn.EntryID]; isSup {
+					continue
+				}
+			}
+
+			var w float64
+			if s.variant.useSurprisal {
+				// Negative control E5: raw surprisal dominates candidate ranking (demonstrating high-entropy noise takeover).
+				w = st.entropy / maxEntropy
+			} else if s.variant.useGraph || s.variant.useBM25 {
+				var baseRel float64
+				if hasQueryEntities {
+					baseRel = 0.20*denseScores[i] + 0.35*bm25Norm[i] + 0.45*graphNorm[i]
+				} else if s.variant.useGraph && s.variant.useBM25 {
+					baseRel = 0.25*denseScores[i] + 0.65*bm25Norm[i] + 0.10*graphNorm[i]
+				} else if s.variant.useBM25 {
+					baseRel = 0.35*denseScores[i] + 0.65*bm25Norm[i]
+				} else {
+					baseRel = 0.55*denseScores[i] + 0.45*graphNorm[i]
+				}
+				if len(rrfScores) == n {
+					baseRel = 0.55*baseRel + 0.45*rrfScores[i]
+				}
+				timeW := 1.0
+				if s.variant.useACTR {
+					timeW = s.actr.TimeWeight(i, atTurn)
+				}
+				w = (0.3 + 0.7*timeW) * st.density * baseRel
+			} else {
+				// E1 (MMR / k-DPP over pure dense similarity).
+				w = denseScores[i]
+			}
+
+			cands = append(cands, algo.Candidate{
+				TurnIdx:  i,
+				EntryID:  st.turn.EntryID,
+				Weight:   w,
+				Tokens:   st.tokens,
+				Vec:      st.vec,
+				Entities: st.entSet,
+			})
+		}
+
+		// Two-stage candidate truncation to N <= 200 and min-max normalize weights into [0, 1]
+		// so MMR relevance vs redundancy trade-off is scale-invariant.
+		sort.Slice(cands, func(i, j int) bool {
+			return cands[i].Weight > cands[j].Weight
+		})
+		if len(cands) > 200 {
+			cands = cands[:200]
+		}
+		if len(cands) > 0 && cands[0].Weight > 0 {
+			maxW := cands[0].Weight
+			for i := range cands {
+				cands[i].Weight /= maxW
+			}
+		}
+
+		// 4. Select diverse subset within recall budget (E4 reuses working set during continuation steps inside the same Epoch).
+		// Guarantee a smooth WorkingSet budget floor so wide EpochRecentWindows do not starve multi-hop recall.
+		floorRatio := s.cfg.WorkingSetFloorRatio
+		if floorRatio <= 0 || floorRatio > 1.0 {
+			floorRatio = 0.65
+		}
+		minRecallBudget := int(float64(s.tokenBudget) * floorRatio)
+		recallBudget := s.tokenBudget - ledgerToks - recentTokens
+		if recallBudget < minRecallBudget {
+			recallBudget = minRecallBudget
+		}
+
 		switch {
 		case s.variant.useKDPP:
 			chosen = algo.SelectBudgetedKDPP(cands, recallBudget, s.cfg.Eta)

@@ -151,3 +151,52 @@ func TestE4AWorkingSetBudgetFloorPreventsStarvation(t *testing.T) {
 		t.Fatalf("expected e_early to be recalled with WorkingSet budget floor, got %v", asm.SelectedEntryIDs)
 	}
 }
+
+func TestE4ARecallsMaskedWindowObservationIntoWorkingSet(t *testing.T) {
+	cfg := strategy.DefaultConfig()
+	cfg.Epoch = 16
+	cfg.RecentWindow = 4
+	cfg.WorkingSetFloorRatio = 0.65
+
+	s := strategy.NewE4A(cfg)
+	s.Reset("You are gp.", 1500)
+
+	// Insert 17 turns so Epoch step-back puts recentStart=0 and freezeBoundary=16.
+	// Turn 5 (index 4) is a critical tool observation inside [recentStart, freezeBoundary)
+	// that gets masked in SegRecentWindow and must still be eligible for WorkingSet recall.
+	for tid := 1; tid <= 17; tid++ {
+		tr := dataset.Turn{
+			TurnID:  tid,
+			EntryID: "e_" + string(rune('a'+tid-1)),
+			Role:    "user",
+			Content: "routine discussion turn without matching symbol",
+		}
+		if tid == 5 {
+			tr = dataset.Turn{
+				TurnID:     5,
+				EntryID:    "e_masked_target",
+				Role:       "tool",
+				ToolCallID: "tc_5",
+				Content:    "internal/biz/job_batch.go PrecheckBatchModifyJobs enforces CanEditJobForUpdate",
+			}
+		}
+		if err := s.OnTurn(tr); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	asm, _, err := s.BuildPrompt("PrecheckBatchModifyJobs internal/biz/job_batch.go", 17)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, id := range asm.SelectedEntryIDs {
+		if id == "e_masked_target" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected masked window observation e_masked_target to be recallable into WorkingSet, got %v", asm.SelectedEntryIDs)
+	}
+}
